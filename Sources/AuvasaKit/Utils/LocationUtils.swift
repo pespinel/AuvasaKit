@@ -196,11 +196,11 @@ public enum LocationUtils {
 
 // MARK: - CLLocationCoordinate2D Extension
 
-extension LocationUtils {
+public extension LocationUtils {
     /// Converts Coordinate to CLLocationCoordinate2D
     /// - Parameter coordinate: AuvasaKit coordinate
     /// - Returns: CoreLocation coordinate
-    public static func toCLLocationCoordinate(_ coordinate: Coordinate) -> CLLocationCoordinate2D {
+    static func toCLLocationCoordinate(_ coordinate: Coordinate) -> CLLocationCoordinate2D {
         CLLocationCoordinate2D(
             latitude: coordinate.latitude,
             longitude: coordinate.longitude
@@ -210,7 +210,7 @@ extension LocationUtils {
     /// Converts CLLocationCoordinate2D to Coordinate
     /// - Parameter clCoordinate: CoreLocation coordinate
     /// - Returns: AuvasaKit coordinate
-    public static func fromCLLocationCoordinate(_ clCoordinate: CLLocationCoordinate2D) -> Coordinate {
+    static func fromCLLocationCoordinate(_ clCoordinate: CLLocationCoordinate2D) -> Coordinate {
         Coordinate(
             latitude: clCoordinate.latitude,
             longitude: clCoordinate.longitude

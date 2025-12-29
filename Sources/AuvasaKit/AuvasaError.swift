@@ -41,6 +41,17 @@ public enum AuvasaError: Error, LocalizedError {
     /// Entity not found
     case notFound(String)
 
+    // MARK: - Cache Errors
+
+    /// Failed to read from cache
+    case cacheReadFailed(Error)
+
+    /// Failed to write to cache
+    case cacheWriteFailed(Error)
+
+    /// Cache not available
+    case cacheNotAvailable
+
     // MARK: - Configuration Errors
 
     /// Invalid configuration
@@ -86,6 +97,15 @@ public enum AuvasaError: Error, LocalizedError {
         case .notFound(let entity):
             "\(entity) not found"
 
+        case .cacheReadFailed(let error):
+            "Failed to read from cache: \(error.localizedDescription)"
+
+        case .cacheWriteFailed(let error):
+            "Failed to write to cache: \(error.localizedDescription)"
+
+        case .cacheNotAvailable:
+            "Cache is not available"
+
         case .invalidConfiguration(let details):
             "Invalid configuration: \(details)"
 
@@ -129,6 +149,12 @@ public enum AuvasaError: Error, LocalizedError {
         case .notFound:
             "The requested entity does not exist"
 
+        case .cacheReadFailed, .cacheWriteFailed:
+            "The cache operation failed"
+
+        case .cacheNotAvailable:
+            "The cache system is not available"
+
         case .invalidConfiguration:
             "The configuration is invalid"
 
@@ -162,6 +188,12 @@ public enum AuvasaError: Error, LocalizedError {
 
         case .notFound:
             "Verify the ID is correct"
+
+        case .cacheReadFailed, .cacheWriteFailed:
+            "Clear the cache and try again"
+
+        case .cacheNotAvailable:
+            "Restart the application"
 
         case .invalidConfiguration:
             "Check your configuration settings"

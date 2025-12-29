@@ -131,16 +131,16 @@ public struct Logger {
 
 // MARK: - Convenience
 
-extension Logger {
+public extension Logger {
     /// Shared logger for AuvasaKit
-    public static let `default` = Logger(category: "AuvasaKit")
+    static let `default` = Logger(category: "AuvasaKit")
 
     /// Logger for networking
-    public static let network = Logger(category: "Network")
+    static let network = Logger(category: "Network")
 
     /// Logger for database operations
-    public static let database = Logger(category: "Database")
+    static let database = Logger(category: "Database")
 
     /// Logger for subscriptions
-    public static let subscriptions = Logger(category: "Subscriptions")
+    static let subscriptions = Logger(category: "Subscriptions")
 }
