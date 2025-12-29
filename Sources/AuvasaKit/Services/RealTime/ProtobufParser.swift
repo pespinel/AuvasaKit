@@ -26,7 +26,7 @@ actor ProtobufParser {
     /// - Returns: Array of vehicle positions
     /// - Throws: ParsingError if parsing fails
     func parseVehiclePositions(_ data: Data) throws -> [VehiclePosition] {
-        let feedMessage = try TransitRealtime_FeedMessage(serializedData: data)
+        let feedMessage = try TransitRealtime_FeedMessage(serializedBytes: data)
 
         guard feedMessage.hasHeader else {
             throw ParsingError.missingRequiredField("header")
@@ -44,7 +44,7 @@ actor ProtobufParser {
     /// - Returns: Array of trip updates
     /// - Throws: ParsingError if parsing fails
     func parseTripUpdates(_ data: Data) throws -> [TripUpdate] {
-        let feedMessage = try TransitRealtime_FeedMessage(serializedData: data)
+        let feedMessage = try TransitRealtime_FeedMessage(serializedBytes: data)
 
         guard feedMessage.hasHeader else {
             throw ParsingError.missingRequiredField("header")
@@ -62,7 +62,7 @@ actor ProtobufParser {
     /// - Returns: Array of alerts
     /// - Throws: ParsingError if parsing fails
     func parseAlerts(_ data: Data) throws -> [Alert] {
-        let feedMessage = try TransitRealtime_FeedMessage(serializedData: data)
+        let feedMessage = try TransitRealtime_FeedMessage(serializedBytes: data)
 
         guard feedMessage.hasHeader else {
             throw ParsingError.missingRequiredField("header")
