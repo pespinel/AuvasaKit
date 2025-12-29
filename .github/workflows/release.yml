@@ -1,0 +1,63 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*"
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: macos-15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Build release
+        run: swift build -c release
+
+      - name: Run tests
+        run: swift test
+
+      - name: Extract version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Generate release notes from CHANGELOG
+        id: release_notes
+        run: |
+          VERSION="${{ steps.get_version.outputs.VERSION }}"
+
+          if [ -f CHANGELOG.md ]; then
+            # Try to grab the section for this version up to the next "## ["
+            CONTENT=$(sed -n "/## \[$VERSION\]/,/## \[/p" CHANGELOG.md | sed '1d;$d' || true)
+
+            # If it is the last section (no following "## ["), read until EOF
+            if [ -z "$CONTENT" ]; then
+              CONTENT=$(sed -n "/## \[$VERSION\]/,\$p" CHANGELOG.md | sed '1d' || true)
+            fi
+
+            if [ -n "$CONTENT" ]; then
+              printf "%s\n" "$CONTENT" > RELEASE_NOTES.md
+            else
+              echo "Release $VERSION" > RELEASE_NOTES.md
+            fi
+          else
+            echo "Release $VERSION" > RELEASE_NOTES.md
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: RELEASE_NOTES.md
+          draft: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
