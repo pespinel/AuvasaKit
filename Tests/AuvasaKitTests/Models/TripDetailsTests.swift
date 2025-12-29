@@ -119,7 +119,7 @@ final class TripDetailsTests: XCTestCase {
         var arrivals: [Arrival] = []
         let now = Date()
 
-        for index in 0 ..< stopCount {
+        for index in 0..<stopCount {
             arrivals.append(
                 createMockArrival(
                     stopId: "STOP\(index)",
