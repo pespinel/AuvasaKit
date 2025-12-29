@@ -210,7 +210,6 @@ public actor AuvasaClient {
         return Array(arrivals.sorted { $0.bestTime < $1.bestTime }.prefix(limit))
     }
 
-
     // MARK: - Service Alerts
 
     /// Fetches all current service alerts

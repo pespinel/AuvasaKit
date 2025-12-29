@@ -37,8 +37,8 @@ extension AuvasaClient {
             guard
                 let trip = try await scheduleService.fetchTrip(id: stopTime.tripId),
                 let route = try await routeService.fetchRoute(id: trip.routeId),
-                let scheduledDate = convertStopTimeToDate(stopTime.departureTime, on: now)
-            else {
+                let scheduledDate = convertStopTimeToDate(stopTime.departureTime, on: now) else
+            {
                 continue
             }
 
@@ -71,11 +71,12 @@ extension AuvasaClient {
         tripUpdate: TripUpdate?,
         scheduledDate: Date
     ) -> (estimatedDate: Date?, delay: Int?) {
-        guard let update = tripUpdate,
-              let stopTimeUpdate = update.stopTimeUpdates.first(where: {
-                  $0.stopId == stopId || $0.stopSequence == stopTime.stopSequence
-              })
-        else {
+        guard
+            let update = tripUpdate,
+            let stopTimeUpdate = update.stopTimeUpdates.first(where: {
+                $0.stopId == stopId || $0.stopSequence == stopTime.stopSequence
+            }) else
+        {
             return (nil, nil)
         }
 
@@ -140,11 +141,12 @@ extension AuvasaClient {
         tripUpdate: TripUpdate?,
         scheduledDate: Date
     ) -> (estimatedDate: Date?, delay: Int?) {
-        guard let update = tripUpdate,
-              let stopTimeUpdate = update.stopTimeUpdates.first(where: {
-                  $0.stopId == stopTime.stopId || $0.stopSequence == stopTime.stopSequence
-              })
-        else {
+        guard
+            let update = tripUpdate,
+            let stopTimeUpdate = update.stopTimeUpdates.first(where: {
+                $0.stopId == stopTime.stopId || $0.stopSequence == stopTime.stopSequence
+            }) else
+        {
             return (nil, nil)
         }
 
@@ -163,9 +165,10 @@ extension AuvasaClient {
         vehiclePosition: VehiclePosition?,
         stopCount: Int
     ) -> Double? {
-        guard let currentStopSequence = vehiclePosition?.currentStopSequence,
-              stopCount > 0
-        else {
+        guard
+            let currentStopSequence = vehiclePosition?.currentStopSequence,
+            stopCount > 0 else
+        {
             return nil
         }
         return Double(currentStopSequence) / Double(stopCount)
