@@ -21,16 +21,29 @@ import Foundation
 /// ```
 public actor AuvasaClient {
     private let realtimeService: RealtimeService
+    private let stopService: StopService
+    private let routeService: RouteService
+    private let scheduleService: ScheduleService
+    private let gtfsImporter: GTFSImporter
+    private let databaseManager: DatabaseManager
 
     /// Configuration options for the client
     public struct Configuration {
         /// Request timeout in seconds
         public let timeout: TimeInterval
+        /// Database manager for static data
+        public let databaseManager: DatabaseManager
 
         /// Creates a new configuration
-        /// - Parameter timeout: Request timeout in seconds (default: 30)
-        public init(timeout: TimeInterval = 30) {
+        /// - Parameters:
+        ///   - timeout: Request timeout in seconds (default: 30)
+        ///   - databaseManager: Database manager (default: .shared)
+        public init(
+            timeout: TimeInterval = 30,
+            databaseManager: DatabaseManager = .shared
+        ) {
             self.timeout = timeout
+            self.databaseManager = databaseManager
         }
 
         /// Default configuration
@@ -42,6 +55,11 @@ public actor AuvasaClient {
     public init(configuration: Configuration = .default) {
         let apiClient = APIClient(timeout: configuration.timeout)
         self.realtimeService = RealtimeService(apiClient: apiClient)
+        self.databaseManager = configuration.databaseManager
+        self.stopService = StopService(databaseManager: databaseManager)
+        self.routeService = RouteService(databaseManager: databaseManager)
+        self.scheduleService = ScheduleService(databaseManager: databaseManager)
+        self.gtfsImporter = GTFSImporter(databaseManager: databaseManager)
     }
 
     // MARK: - Vehicle Positions
@@ -233,5 +251,292 @@ public actor AuvasaClient {
     /// ```
     public func fetchActiveAlerts() async throws -> [Alert] {
         try await realtimeService.fetchActiveAlerts()
+    }
+
+    // MARK: - Static Data Import
+
+    /// Downloads and imports GTFS static data
+    ///
+    /// This operation downloads the GTFS ZIP file from AUVASA and imports
+    /// all static data (stops, routes, trips, schedules) into the local database.
+    /// This is a long-running operation that should typically be done on first launch
+    /// or when updating the static data.
+    ///
+    /// - Throws: Import errors if download or parsing fails
+    ///
+    /// Example:
+    /// ```swift
+    /// // On first launch
+    /// try await client.updateStaticData()
+    /// ```
+    public func updateStaticData() async throws {
+        try await gtfsImporter.importGTFSData()
+    }
+
+    // MARK: - Stops
+
+    /// Searches stops by name
+    ///
+    /// - Parameter query: Search query (case-insensitive, partial match)
+    /// - Returns: Array of matching stops
+    /// - Throws: Database errors if query fails
+    ///
+    /// Example:
+    /// ```swift
+    /// let stops = try await client.searchStops(query: "plaza")
+    /// ```
+    public func searchStops(query: String) async throws -> [Stop] {
+        try await stopService.searchStops(query: query)
+    }
+
+    /// Finds stops near a coordinate
+    ///
+    /// - Parameters:
+    ///   - coordinate: Center point for search
+    ///   - radiusMeters: Search radius in meters
+    /// - Returns: Array of nearby stops sorted by distance
+    /// - Throws: Database errors if query fails
+    ///
+    /// Example:
+    /// ```swift
+    /// let coordinate = Coordinate(latitude: 41.6523, longitude: -4.7245)
+    /// let nearbyStops = try await client.findNearbyStops(
+    ///     coordinate: coordinate,
+    ///     radiusMeters: 500
+    /// )
+    /// ```
+    public func findNearbyStops(
+        coordinate: Coordinate,
+        radiusMeters: Double
+    ) async throws -> [Stop] {
+        try await stopService.findNearbyStopsOptimized(
+            coordinate: coordinate,
+            radiusMeters: radiusMeters
+        )
+    }
+
+    /// Gets a stop by ID
+    ///
+    /// - Parameter id: Stop identifier
+    /// - Returns: Stop if found, nil otherwise
+    /// - Throws: Database errors if query fails
+    ///
+    /// Example:
+    /// ```swift
+    /// if let stop = try await client.getStop(id: "123") {
+    ///     print("Stop: \(stop.name)")
+    /// }
+    /// ```
+    public func getStop(id: String) async throws -> Stop? {
+        try await stopService.fetchStop(id: id)
+    }
+
+    /// Fetches all stops
+    ///
+    /// - Returns: Array of all stops
+    /// - Throws: Database errors if query fails
+    ///
+    /// Example:
+    /// ```swift
+    /// let allStops = try await client.fetchAllStops()
+    /// ```
+    public func fetchAllStops() async throws -> [Stop] {
+        try await stopService.fetchAllStops()
+    }
+
+    /// Fetches wheelchair accessible stops
+    ///
+    /// - Returns: Array of stops with wheelchair boarding
+    /// - Throws: Database errors if query fails
+    ///
+    /// Example:
+    /// ```swift
+    /// let accessibleStops = try await client.fetchWheelchairAccessibleStops()
+    /// ```
+    public func fetchWheelchairAccessibleStops() async throws -> [Stop] {
+        try await stopService.fetchWheelchairAccessibleStops()
+    }
+
+    // MARK: - Routes
+
+    /// Fetches all routes
+    ///
+    /// - Returns: Array of all routes sorted by sort order and name
+    /// - Throws: Database errors if query fails
+    ///
+    /// Example:
+    /// ```swift
+    /// let routes = try await client.fetchRoutes()
+    /// for route in routes {
+    ///     print("\(route.shortName): \(route.longName)")
+    /// }
+    /// ```
+    public func fetchRoutes() async throws -> [Route] {
+        try await routeService.fetchAllRoutes()
+    }
+
+    /// Gets a route by ID
+    ///
+    /// - Parameter id: Route identifier
+    /// - Returns: Route if found, nil otherwise
+    /// - Throws: Database errors if query fails
+    ///
+    /// Example:
+    /// ```swift
+    /// if let route = try await client.getRoute(id: "L1") {
+    ///     print("Route: \(route.longName)")
+    /// }
+    /// ```
+    public func getRoute(id: String) async throws -> Route? {
+        try await routeService.fetchRoute(id: id)
+    }
+
+    /// Searches routes by name
+    ///
+    /// - Parameter query: Search query (case-insensitive, partial match)
+    /// - Returns: Array of matching routes
+    /// - Throws: Database errors if query fails
+    ///
+    /// Example:
+    /// ```swift
+    /// let routes = try await client.searchRoutes(query: "circular")
+    /// ```
+    public func searchRoutes(query: String) async throws -> [Route] {
+        try await routeService.searchRoutes(query: query)
+    }
+
+    /// Fetches routes by type
+    ///
+    /// - Parameter type: Route type (bus, tram, etc.)
+    /// - Returns: Array of routes of specified type
+    /// - Throws: Database errors if query fails
+    ///
+    /// Example:
+    /// ```swift
+    /// let buses = try await client.fetchRoutes(type: .bus)
+    /// ```
+    public func fetchRoutes(type: RouteType) async throws -> [Route] {
+        try await routeService.fetchRoutes(type: type)
+    }
+
+    // MARK: - Schedules
+
+    /// Gets the schedule for a stop on a specific date
+    ///
+    /// - Parameters:
+    ///   - stopId: Stop identifier
+    ///   - date: Date to get schedule for (default: today)
+    /// - Returns: Array of stop times for the date
+    /// - Throws: Database errors if query fails
+    ///
+    /// Example:
+    /// ```swift
+    /// let schedule = try await client.getSchedule(stopId: "123")
+    /// for stopTime in schedule {
+    ///     print("Departure: \(stopTime.departureTime)")
+    /// }
+    /// ```
+    public func getSchedule(
+        stopId: String,
+        date: Date = Date()
+    ) async throws -> [StopTime] {
+        try await scheduleService.fetchStopTimes(stopId: stopId, date: date)
+    }
+
+    /// Fetches upcoming departures from a stop
+    ///
+    /// - Parameters:
+    ///   - stopId: Stop identifier
+    ///   - afterTime: Time to search after (HH:MM:SS format)
+    ///   - limit: Maximum number of results (default: 10)
+    /// - Returns: Array of upcoming stop times
+    /// - Throws: Database errors if query fails
+    ///
+    /// Example:
+    /// ```swift
+    /// let now = "14:30:00"
+    /// let upcoming = try await client.fetchUpcomingDepartures(
+    ///     stopId: "123",
+    ///     afterTime: now,
+    ///     limit: 5
+    /// )
+    /// ```
+    public func fetchUpcomingDepartures(
+        stopId: String,
+        afterTime: String,
+        limit: Int = 10
+    ) async throws -> [StopTime] {
+        try await scheduleService.fetchUpcomingDepartures(
+            stopId: stopId,
+            afterTime: afterTime,
+            limit: limit
+        )
+    }
+
+    /// Gets a trip by ID
+    ///
+    /// - Parameter tripId: Trip identifier
+    /// - Returns: Trip if found, nil otherwise
+    /// - Throws: Database errors if query fails
+    ///
+    /// Example:
+    /// ```swift
+    /// if let trip = try await client.getTrip(id: "trip123") {
+    ///     print("Trip headsign: \(trip.headsign ?? "")")
+    /// }
+    /// ```
+    public func getTrip(id: String) async throws -> Trip? {
+        try await scheduleService.fetchTrip(id: id)
+    }
+
+    /// Fetches trips for a route
+    ///
+    /// - Parameter routeId: Route identifier
+    /// - Returns: Array of trips for the route
+    /// - Throws: Database errors if query fails
+    ///
+    /// Example:
+    /// ```swift
+    /// let trips = try await client.fetchTrips(routeId: "L1")
+    /// ```
+    public func fetchTrips(routeId: String) async throws -> [Trip] {
+        try await scheduleService.fetchTrips(routeId: routeId)
+    }
+
+    /// Checks if a service is active on a date
+    ///
+    /// - Parameters:
+    ///   - serviceId: Service identifier
+    ///   - date: Date to check
+    /// - Returns: True if service is active
+    /// - Throws: Database errors if query fails
+    ///
+    /// Example:
+    /// ```swift
+    /// let isActive = try await client.isServiceActive(
+    ///     serviceId: "weekday",
+    ///     on: Date()
+    /// )
+    /// ```
+    public func isServiceActive(
+        serviceId: String,
+        on date: Date
+    ) async throws -> Bool {
+        try await scheduleService.isServiceActive(serviceId: serviceId, on: date)
+    }
+
+    /// Fetches shape points for a route
+    ///
+    /// - Parameter shapeId: Shape identifier
+    /// - Returns: Array of shape points sorted by sequence
+    /// - Throws: Database errors if query fails
+    ///
+    /// Example:
+    /// ```swift
+    /// let points = try await client.fetchShapePoints(shapeId: "shape1")
+    /// // Use points to draw route on map
+    /// ```
+    public func fetchShapePoints(shapeId: String) async throws -> [ShapePoint] {
+        try await scheduleService.fetchShapePoints(shapeId: shapeId)
     }
 }
