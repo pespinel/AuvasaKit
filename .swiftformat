@@ -42,7 +42,7 @@
 --patternlet inline
 
 # Declarations
---extensionacl on-declarations
+--extensionacl on-extension
 --modifierorder override,nonisolated,public,internal,fileprivate,private,static,class,final,required,convenience,lazy,weak,dynamic,optional
 
 # Imports

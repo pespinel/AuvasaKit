@@ -1,5 +1,7 @@
 import Foundation
 
+private let logger = Logger.subscriptions
+
 /// Manages real-time subscriptions with automatic polling
 actor SubscriptionManager {
     private let realtimeService: RealtimeService
@@ -193,8 +195,7 @@ actor SubscriptionManager {
                         break
                     } catch {
                         // Log error but continue polling
-                        // TODO: Use proper logger when available
-                        // Silently continue for now
+                        logger.error("Subscription polling error", error: error)
 
                         // Wait a bit before retrying on error
                         try? await Task.sleep(nanoseconds: 5_000_000_000) // 5 seconds
