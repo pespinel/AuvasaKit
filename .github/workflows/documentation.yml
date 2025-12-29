@@ -1,0 +1,56 @@
+name: Documentation
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Build documentation
+        run: |
+          xcodebuild docbuild \
+            -scheme AuvasaKit \
+            -derivedDataPath /tmp/docbuild \
+            -destination 'generic/platform=iOS'
+
+      - name: Process DocC Archive
+        run: |
+          # Find the .doccarchive
+          DOCC_ARCHIVE=$(find /tmp/docbuild -name "*.doccarchive" | head -1)
+
+          echo "Found archive: $DOCC_ARCHIVE"
+
+          # Convert to static site
+          xcrun docc process-archive transform-for-static-hosting \
+            "$DOCC_ARCHIVE" \
+            --output-path ./docs
+
+          # Fix paths for GitHub Pages subdirectory hosting
+          # Convert absolute paths in HTML files only
+          find ./docs -name "*.html" -type f -exec sed -i '' \
+            -e 's|href="/|href="/AuvasaKit/|g' \
+            -e 's|src="/|src="/AuvasaKit/|g' \
+            -e 's|var baseUrl = "/"|var baseUrl = "/AuvasaKit/"|g' \
+            {} +
+
+          # Add redirect from root to documentation
+          echo '<script>window.location.href = "/AuvasaKit/documentation/auvasakit"</script>' > ./docs/index.html
+
+          echo "Documentation generated for GitHub Pages at /AuvasaKit/"
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs
+          publish_branch: gh-pages
+          force_orphan: true
