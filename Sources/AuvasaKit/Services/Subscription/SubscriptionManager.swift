@@ -33,7 +33,7 @@ actor SubscriptionManager {
     ///     print("Received \(positions.count) vehicles")
     /// }
     /// ```
-    func subscribeToVehiclePositions() -> AsyncStream<[VehiclePosition]> {
+    nonisolated func subscribeToVehiclePositions() -> AsyncStream<[VehiclePosition]> {
         createStream { [weak self] in
             try await self?.realtimeService.fetchVehiclePositions() ?? []
         }
@@ -50,7 +50,7 @@ actor SubscriptionManager {
     ///     print("Line 1 has \(positions.count) buses")
     /// }
     /// ```
-    func subscribeToVehiclePositions(routeId: String) -> AsyncStream<[VehiclePosition]> {
+    nonisolated func subscribeToVehiclePositions(routeId: String) -> AsyncStream<[VehiclePosition]> {
         createStream { [weak self] in
             try await self?.realtimeService.fetchVehiclePositions(routeId: routeId) ?? []
         }
@@ -68,7 +68,7 @@ actor SubscriptionManager {
     ///     print("Received \(updates.count) trip updates")
     /// }
     /// ```
-    func subscribeToTripUpdates() -> AsyncStream<[TripUpdate]> {
+    nonisolated func subscribeToTripUpdates() -> AsyncStream<[TripUpdate]> {
         createStream { [weak self] in
             try await self?.realtimeService.fetchTripUpdates() ?? []
         }
@@ -85,7 +85,7 @@ actor SubscriptionManager {
     ///     print("Stop has \(updates.count) upcoming arrivals")
     /// }
     /// ```
-    func subscribeToTripUpdates(stopId: String) -> AsyncStream<[TripUpdate]> {
+    nonisolated func subscribeToTripUpdates(stopId: String) -> AsyncStream<[TripUpdate]> {
         createStream { [weak self] in
             try await self?.realtimeService.fetchTripUpdates(stopId: stopId) ?? []
         }
@@ -103,7 +103,7 @@ actor SubscriptionManager {
     ///     print("Active alerts: \(alerts.count)")
     /// }
     /// ```
-    func subscribeToAlerts() -> AsyncStream<[Alert]> {
+    nonisolated func subscribeToAlerts() -> AsyncStream<[Alert]> {
         createStream { [weak self] in
             try await self?.realtimeService.fetchAlerts() ?? []
         }
@@ -120,7 +120,7 @@ actor SubscriptionManager {
     ///     print("Line 1 alerts: \(alerts.count)")
     /// }
     /// ```
-    func subscribeToAlerts(routeId: String) -> AsyncStream<[Alert]> {
+    nonisolated func subscribeToAlerts(routeId: String) -> AsyncStream<[Alert]> {
         createStream { [weak self] in
             try await self?.realtimeService.fetchAlerts(routeId: routeId) ?? []
         }
@@ -137,7 +137,7 @@ actor SubscriptionManager {
     ///     print("Stop alerts: \(alerts.count)")
     /// }
     /// ```
-    func subscribeToAlerts(stopId: String) -> AsyncStream<[Alert]> {
+    nonisolated func subscribeToAlerts(stopId: String) -> AsyncStream<[Alert]> {
         createStream { [weak self] in
             try await self?.realtimeService.fetchAlerts(stopId: stopId) ?? []
         }
@@ -155,7 +155,7 @@ actor SubscriptionManager {
     ///     }
     /// }
     /// ```
-    func subscribeToActiveAlerts() -> AsyncStream<[Alert]> {
+    nonisolated func subscribeToActiveAlerts() -> AsyncStream<[Alert]> {
         createStream { [weak self] in
             try await self?.realtimeService.fetchActiveAlerts() ?? []
         }
@@ -167,7 +167,7 @@ actor SubscriptionManager {
     ///
     /// - Parameter fetcher: Async closure that fetches data
     /// - Returns: AsyncStream that yields fetched data
-    private func createStream<T>(
+    nonisolated private func createStream<T>(
         fetcher: @escaping @Sendable () async throws -> T
     ) -> AsyncStream<T> {
         AsyncStream { continuation in

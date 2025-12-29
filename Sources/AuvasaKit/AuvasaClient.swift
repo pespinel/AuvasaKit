@@ -26,6 +26,7 @@ public actor AuvasaClient {
     private let scheduleService: ScheduleService
     private let gtfsImporter: GTFSImporter
     private let databaseManager: DatabaseManager
+    private let subscriptionManager: SubscriptionManager
 
     /// Configuration options for the client
     public struct Configuration {
@@ -33,17 +34,22 @@ public actor AuvasaClient {
         public let timeout: TimeInterval
         /// Database manager for static data
         public let databaseManager: DatabaseManager
+        /// Polling interval for subscriptions in seconds
+        public let pollingInterval: TimeInterval
 
         /// Creates a new configuration
         /// - Parameters:
         ///   - timeout: Request timeout in seconds (default: 30)
         ///   - databaseManager: Database manager (default: .shared)
+        ///   - pollingInterval: Polling interval for subscriptions (default: 30)
         public init(
             timeout: TimeInterval = 30,
-            databaseManager: DatabaseManager = .shared
+            databaseManager: DatabaseManager = .shared,
+            pollingInterval: TimeInterval = 30
         ) {
             self.timeout = timeout
             self.databaseManager = databaseManager
+            self.pollingInterval = pollingInterval
         }
 
         /// Default configuration
@@ -60,6 +66,10 @@ public actor AuvasaClient {
         self.routeService = RouteService(databaseManager: databaseManager)
         self.scheduleService = ScheduleService(databaseManager: databaseManager)
         self.gtfsImporter = GTFSImporter(databaseManager: databaseManager)
+        self.subscriptionManager = SubscriptionManager(
+            realtimeService: realtimeService,
+            pollingInterval: configuration.pollingInterval
+        )
     }
 
     // MARK: - Vehicle Positions
@@ -538,5 +548,152 @@ public actor AuvasaClient {
     /// ```
     public func fetchShapePoints(shapeId: String) async throws -> [ShapePoint] {
         try await scheduleService.fetchShapePoints(shapeId: shapeId)
+    }
+
+    // MARK: - Real-Time Subscriptions
+
+    /// Subscribes to all vehicle position updates
+    ///
+    /// Creates a stream that automatically polls for vehicle positions
+    /// at the configured interval and yields updates as they become available.
+    ///
+    /// - Returns: AsyncStream of vehicle position arrays
+    ///
+    /// Example:
+    /// ```swift
+    /// for await positions in client.subscribeToVehiclePositions() {
+    ///     print("Received \(positions.count) vehicles")
+    ///     // Update UI with new positions
+    /// }
+    /// ```
+    public func subscribeToVehiclePositions() -> AsyncStream<[VehiclePosition]> {
+        subscriptionManager.subscribeToVehiclePositions()
+    }
+
+    /// Subscribes to vehicle position updates for a specific route
+    ///
+    /// - Parameter routeId: Route identifier to filter by
+    /// - Returns: AsyncStream of vehicle position arrays for the route
+    ///
+    /// Example:
+    /// ```swift
+    /// for await positions in client.subscribeToVehiclePositions(routeId: "L1") {
+    ///     print("Line 1 has \(positions.count) buses")
+    ///     // Update map markers for line 1
+    /// }
+    /// ```
+    public func subscribeToVehiclePositions(routeId: String) -> AsyncStream<[VehiclePosition]> {
+        subscriptionManager.subscribeToVehiclePositions(routeId: routeId)
+    }
+
+    /// Subscribes to all trip update notifications
+    ///
+    /// - Returns: AsyncStream of trip update arrays
+    ///
+    /// Example:
+    /// ```swift
+    /// for await updates in client.subscribeToTripUpdates() {
+    ///     print("Received \(updates.count) trip updates")
+    ///     // Process arrival predictions
+    /// }
+    /// ```
+    public func subscribeToTripUpdates() -> AsyncStream<[TripUpdate]> {
+        subscriptionManager.subscribeToTripUpdates()
+    }
+
+    /// Subscribes to trip updates for a specific stop
+    ///
+    /// - Parameter stopId: Stop identifier to filter by
+    /// - Returns: AsyncStream of trip update arrays for the stop
+    ///
+    /// Example:
+    /// ```swift
+    /// for await updates in client.subscribeToTripUpdates(stopId: "123") {
+    ///     print("Stop has \(updates.count) upcoming arrivals")
+    ///     // Update real-time arrival board
+    /// }
+    /// ```
+    public func subscribeToTripUpdates(stopId: String) -> AsyncStream<[TripUpdate]> {
+        subscriptionManager.subscribeToTripUpdates(stopId: stopId)
+    }
+
+    /// Subscribes to all service alert notifications
+    ///
+    /// - Returns: AsyncStream of alert arrays
+    ///
+    /// Example:
+    /// ```swift
+    /// for await alerts in client.subscribeToAlerts() {
+    ///     print("Active alerts: \(alerts.count)")
+    ///     // Display alerts in notification area
+    /// }
+    /// ```
+    public func subscribeToAlerts() -> AsyncStream<[Alert]> {
+        subscriptionManager.subscribeToAlerts()
+    }
+
+    /// Subscribes to alerts affecting a specific route
+    ///
+    /// - Parameter routeId: Route identifier to filter by
+    /// - Returns: AsyncStream of alert arrays for the route
+    ///
+    /// Example:
+    /// ```swift
+    /// for await alerts in client.subscribeToAlerts(routeId: "L1") {
+    ///     print("Line 1 alerts: \(alerts.count)")
+    ///     // Show route-specific alerts
+    /// }
+    /// ```
+    public func subscribeToAlerts(routeId: String) -> AsyncStream<[Alert]> {
+        subscriptionManager.subscribeToAlerts(routeId: routeId)
+    }
+
+    /// Subscribes to alerts affecting a specific stop
+    ///
+    /// - Parameter stopId: Stop identifier to filter by
+    /// - Returns: AsyncStream of alert arrays for the stop
+    ///
+    /// Example:
+    /// ```swift
+    /// for await alerts in client.subscribeToAlerts(stopId: "123") {
+    ///     print("Stop alerts: \(alerts.count)")
+    ///     // Show stop-specific service disruptions
+    /// }
+    /// ```
+    public func subscribeToAlerts(stopId: String) -> AsyncStream<[Alert]> {
+        subscriptionManager.subscribeToAlerts(stopId: stopId)
+    }
+
+    /// Subscribes to only currently active alerts
+    ///
+    /// - Returns: AsyncStream of currently active alert arrays
+    ///
+    /// Example:
+    /// ```swift
+    /// for await alerts in client.subscribeToActiveAlerts() {
+    ///     for alert in alerts {
+    ///         print("⚠️ \(alert.headerText)")
+    ///     }
+    /// }
+    /// ```
+    public func subscribeToActiveAlerts() -> AsyncStream<[Alert]> {
+        subscriptionManager.subscribeToActiveAlerts()
+    }
+
+    /// Cancels all active subscriptions
+    ///
+    /// Call this when you no longer need real-time updates,
+    /// such as when a view disappears or the app goes to background.
+    ///
+    /// Example:
+    /// ```swift
+    /// // In your view controller
+    /// override func viewWillDisappear(_ animated: Bool) {
+    ///     super.viewWillDisappear(animated)
+    ///     await client.cancelAllSubscriptions()
+    /// }
+    /// ```
+    public func cancelAllSubscriptions() async {
+        await subscriptionManager.cancelAllSubscriptions()
     }
 }
