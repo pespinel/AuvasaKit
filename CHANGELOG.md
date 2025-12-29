@@ -36,6 +36,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - DiskCache actor with size limits and automatic cleanup
   - CacheManager coordinating both caches
   - Predefined cache policies for different data types
+- **Advanced Features** (combining static + real-time data):
+  - Arrival model merging schedule with real-time predictions
+  - getNextArrivals() showing scheduled and estimated times with delays
+  - getTripDetails() providing complete trip information with live updates
+  - Trip progress calculation based on current stop sequence
+  - Optimized nearby stops search with bounding box queries
 - **CI/CD**:
   - GitHub Actions workflow for automated build, test, and lint
   - SwiftLint strict checking with comprehensive rules

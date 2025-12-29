@@ -20,13 +20,13 @@ import Foundation
 /// )
 /// ```
 public actor AuvasaClient {
-    private let realtimeService: RealtimeService
-    private let stopService: StopService
-    private let routeService: RouteService
-    private let scheduleService: ScheduleService
-    private let gtfsImporter: GTFSImporter
-    private let databaseManager: DatabaseManager
-    private let subscriptionManager: SubscriptionManager
+    let realtimeService: RealtimeService
+    let stopService: StopService
+    let routeService: RouteService
+    let scheduleService: ScheduleService
+    let gtfsImporter: GTFSImporter
+    let databaseManager: DatabaseManager
+    let subscriptionManager: SubscriptionManager
 
     /// Configuration options for the client
     public struct Configuration {
@@ -164,39 +164,52 @@ public actor AuvasaClient {
         try await realtimeService.fetchTripUpdates(stopId: stopId)
     }
 
-    /// Gets next arrivals at a stop with delay information
+    /// Gets next arrivals at a stop combining schedule and real-time data
+    ///
+    /// This method merges static GTFS schedule data with live trip updates
+    /// to provide accurate arrival predictions. It shows scheduled times
+    /// along with real-time estimates and delays when available.
     ///
     /// - Parameters:
     ///   - stopId: The stop ID
     ///   - limit: Maximum number of arrivals to return (default: 5)
-    /// - Returns: Array of trip updates sorted by arrival time
-    /// - Throws: `NetworkError` if the request fails
+    /// - Returns: Array of arrivals sorted by best available time
+    /// - Throws: `NetworkError` if the request fails, database errors if query fails
     ///
     /// Example:
     /// ```swift
     /// let nextBuses = try await client.getNextArrivals(stopId: "123", limit: 3)
-    /// for update in nextBuses {
-    ///     print("Next bus in \(update.delay ?? 0)s")
+    /// for arrival in nextBuses {
+    ///     if arrival.realtimeAvailable {
+    ///         print("\(arrival.route.shortName): \(arrival.estimatedTime!) (\(arrival.delayDescription ?? ""))")
+    ///     } else {
+    ///         print("\(arrival.route.shortName): \(arrival.scheduledTime) (scheduled)")
+    ///     }
     /// }
     /// ```
     public func getNextArrivals(
         stopId: String,
         limit: Int = 5
-    ) async throws -> [TripUpdate] {
-        let updates = try await fetchTripUpdates(stopId: stopId)
-
-        return Array(
-            updates
-                .filter { update in
-                    update.stopTimeUpdates.contains { $0.stopId == stopId }
-                }
-                .sorted { lhs, rhs in
-                    // Sort by timestamp, earlier first
-                    lhs.timestamp < rhs.timestamp
-                }
-                .prefix(limit)
+    ) async throws -> [Arrival] {
+        let currentTime = getCurrentTimeString()
+        let stopTimes = try await scheduleService.fetchUpcomingDepartures(
+            stopId: stopId,
+            afterTime: currentTime,
+            limit: limit * 3
         )
+
+        let tripUpdates = try await realtimeService.fetchTripUpdates(stopId: stopId)
+        let tripUpdateMap = createTripUpdateMap(from: tripUpdates)
+
+        let arrivals = try await buildArrivals(
+            from: stopTimes,
+            stopId: stopId,
+            tripUpdateMap: tripUpdateMap
+        )
+
+        return Array(arrivals.sorted { $0.bestTime < $1.bestTime }.prefix(limit))
     }
+
 
     // MARK: - Service Alerts
 
@@ -548,6 +561,61 @@ public actor AuvasaClient {
     /// ```
     public func fetchShapePoints(shapeId: String) async throws -> [ShapePoint] {
         try await scheduleService.fetchShapePoints(shapeId: shapeId)
+    }
+
+    // MARK: - Advanced Features
+
+    /// Gets complete details for a specific trip with real-time updates
+    ///
+    /// Provides comprehensive information about a trip including all stops,
+    /// schedule, real-time vehicle position, delays, and trip progress.
+    ///
+    /// - Parameter tripId: Trip identifier
+    /// - Returns: Complete trip details with real-time data
+    /// - Throws: Database errors if query fails, or if trip not found
+    ///
+    /// Example:
+    /// ```swift
+    /// let details = try await client.getTripDetails(tripId: "trip123")
+    /// print("Route: \(details.route.shortName) - \(details.trip.headsign ?? "")")
+    /// if let vehicle = details.vehiclePosition {
+    ///     print("Vehicle at: \(vehicle.position)")
+    /// }
+    /// print("Progress: \(Int((details.progress ?? 0) * 100))%")
+    /// ```
+    public func getTripDetails(tripId: String) async throws -> TripDetails {
+        guard let trip = try await scheduleService.fetchTrip(id: tripId) else {
+            throw AuvasaError.notFound("Trip not found: \(tripId)")
+        }
+
+        guard let route = try await routeService.fetchRoute(id: trip.routeId) else {
+            throw AuvasaError.notFound("Route not found: \(trip.routeId)")
+        }
+
+        let stopTimes = try await scheduleService.fetchStopTimes(tripId: tripId)
+        let (tripUpdate, vehiclePosition) = try await fetchRealtimeData(tripId: tripId)
+
+        let stopArrivals = try buildTripStopArrivals(
+            stopTimes: stopTimes,
+            trip: trip,
+            route: route,
+            tripUpdate: tripUpdate
+        )
+
+        let progress = calculateTripProgress(
+            vehiclePosition: vehiclePosition,
+            stopCount: stopArrivals.count
+        )
+
+        return TripDetails(
+            trip: trip,
+            route: route,
+            stopArrivals: stopArrivals,
+            vehiclePosition: vehiclePosition,
+            delay: tripUpdate?.delay,
+            realtimeAvailable: tripUpdate != nil,
+            progress: progress
+        )
     }
 
     // MARK: - Real-Time Subscriptions
