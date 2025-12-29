@@ -15,7 +15,7 @@ actor MemoryCache {
     /// - Parameters:
     ///   - key: Cache key
     ///   - value: Value to cache
-    func set<T: Codable>(_ key: String, value: T) {
+    func set(_ key: String, value: some Codable) {
         let cached = CachedValue(value: value, timestamp: Date(), key: key)
 
         // Evict oldest item if at capacity

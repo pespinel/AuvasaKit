@@ -16,7 +16,7 @@ public actor CacheManager {
     ///   - cacheDirectory: Custom cache directory (optional)
     public init(
         memoryMaxItems: Int = 100,
-        diskMaxSize: Int64 = 50 * 1024 * 1024,
+        diskMaxSize: Int64 = 50 * 1_024 * 1_024,
         enableDiskCache: Bool = true,
         cacheDirectory: URL? = nil
     ) {
@@ -101,9 +101,9 @@ public actor CacheManager {
     ///     policy: .vehiclePosition
     /// )
     /// ```
-    public func set<T: Codable>(
+    public func set(
         key: String,
-        value: T,
+        value: some Codable,
         policy: CachePolicy? = nil
     ) async {
         // Always cache in memory
@@ -179,7 +179,7 @@ public actor CacheManager {
 
         var diskUsage: Int64 = 0
         if let diskCache {
-            diskUsage = (try? await diskCache.diskUsage()) ?? 0
+            diskUsage = await (try? diskCache.diskUsage()) ?? 0
         }
 
         return (memoryCount, diskUsage)

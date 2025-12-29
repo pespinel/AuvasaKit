@@ -12,15 +12,17 @@ actor DiskCache {
     /// - Parameters:
     ///   - directory: Custom cache directory (optional)
     ///   - maxDiskSize: Maximum disk usage in bytes (default: 50MB)
-    init(directory: URL? = nil, maxDiskSize: Int64 = 50 * 1024 * 1024) throws {
+    init(directory: URL? = nil, maxDiskSize: Int64 = 50 * 1_024 * 1_024) throws {
         if let directory {
             self.cacheDirectory = directory
         } else {
             // Use system cache directory
-            guard let cacheDir = fileManager.urls(
-                for: .cachesDirectory,
-                in: .userDomainMask
-            ).first else {
+            guard
+                let cacheDir = fileManager.urls(
+                    for: .cachesDirectory,
+                    in: .userDomainMask
+                ).first else
+            {
                 throw AuvasaError.invalidConfiguration("Cannot access cache directory")
             }
             self.cacheDirectory = cacheDir.appendingPathComponent("com.auvasa.auvasakit")
@@ -41,7 +43,7 @@ actor DiskCache {
     /// - Parameters:
     ///   - key: Cache key
     ///   - value: Value to cache
-    func set<T: Codable>(_ key: String, value: T) async throws {
+    func set(_ key: String, value: some Codable) async throws {
         let cached = CachedValue(value: value, timestamp: Date(), key: key)
         let fileURL = cacheFileURL(for: key)
 
