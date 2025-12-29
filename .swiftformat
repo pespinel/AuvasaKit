@@ -1,0 +1,99 @@
+# SwiftFormat Configuration for AuvasaKit
+# Modern Swift formatting rules for consistent code style
+
+# SwiftFormat version
+--swiftversion 5.9
+
+# File options
+--exclude .build,.swiftpm,Sources/AuvasaKit/Generated,Pods,Carthage,vendor
+
+# Indentation
+--indent 4
+--indentcase false
+--indentstrings true
+--tabwidth 4
+--xcodeindentation enabled
+--smarttabs enabled
+
+# Spacing
+--trimwhitespace always
+--nospaceoperators ...,..<
+--ranges spaced
+--empty void
+--stripunusedargs closure-only
+
+# Wrapping
+--maxwidth 120
+--wraparguments before-first
+--wrapparameters before-first
+--wrapcollections before-first
+--wrapternary before-operators
+--wrapconditions before-first
+--closingparen balanced
+
+# Braces
+--allman false
+--elseposition same-line
+--guardelse same-line
+--closurevoid remove
+
+# Control flow
+--ifdef no-indent
+--patternlet inline
+
+# Declarations
+--extensionacl on-declarations
+--modifierorder override,public,internal,fileprivate,private,static,class,final,required,convenience,lazy,weak,dynamic,optional
+
+# Imports
+--importgrouping testable-bottom
+
+# Comments
+--commas always
+--comments indent
+--linebreaks lf
+
+# Semicolons
+--semicolons never
+
+# Self
+--self init-only
+--selfrequired
+
+# Type annotations
+--typeattributes prev-line
+
+# Enable all rules except problematic ones
+--enable isEmpty
+--enable sortedImports
+--enable duplicateImports
+--enable redundantType
+--enable redundantBackticks
+--enable redundantBreak
+--enable redundantExtensionACL
+--enable redundantFileprivate
+--enable redundantGet
+--enable redundantInit
+--enable redundantLet
+--enable redundantLetError
+--enable redundantNilInit
+--enable redundantObjc
+--enable redundantParens
+--enable redundantPattern
+--enable redundantRawValues
+--enable redundantReturn
+--enable redundantSelf
+--enable redundantVoidReturnType
+--enable trailingClosures
+--enable trailingCommas
+--enable unusedArguments
+--enable void
+--enable wrapArguments
+--enable wrapAttributes
+
+# Disable rules that might conflict with project style
+--disable andOperator
+--disable acronyms
+--disable blankLinesBetweenScopes
+--disable sortDeclarations
+--disable organizeDeclarations

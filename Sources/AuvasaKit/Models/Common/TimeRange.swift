@@ -21,7 +21,7 @@ public struct TimeRange: Sendable, Equatable, Codable {
     /// - Parameter date: The date to check
     /// - Returns: true if the date is within the range
     public func contains(_ date: Date) -> Bool {
-        if let end = end {
+        if let end {
             return date >= start && date <= end
         }
         return date >= start
@@ -34,7 +34,7 @@ public struct TimeRange: Sendable, Equatable, Codable {
 
     /// The duration of the time range in seconds (nil if indefinite)
     public var duration: TimeInterval? {
-        guard let end = end else { return nil }
+        guard let end else { return nil }
         return end.timeIntervalSince(start)
     }
 }
@@ -43,7 +43,7 @@ public struct TimeRange: Sendable, Equatable, Codable {
 
 extension TimeRange: CustomStringConvertible {
     public var description: String {
-        if let end = end {
+        if let end {
             return "\(start) - \(end)"
         }
         return "\(start) - indefinite"

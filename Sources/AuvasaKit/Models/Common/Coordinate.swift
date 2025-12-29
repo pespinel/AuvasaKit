@@ -1,5 +1,5 @@
-import Foundation
 import CoreLocation
+import Foundation
 
 /// Represents a geographic coordinate with latitude and longitude
 public struct Coordinate: Sendable, Equatable, Codable {
@@ -22,7 +22,7 @@ public struct Coordinate: Sendable, Equatable, Codable {
     /// - Parameter other: The target coordinate
     /// - Returns: The distance in meters
     public func distance(to other: Coordinate) -> Double {
-        let earthRadius = 6371000.0 // Earth's radius in meters
+        let earthRadius = 6_371_000.0 // Earth's radius in meters
 
         let lat1Rad = latitude * .pi / 180
         let lat2Rad = other.latitude * .pi / 180
@@ -30,8 +30,8 @@ public struct Coordinate: Sendable, Equatable, Codable {
         let deltaLon = (other.longitude - longitude) * .pi / 180
 
         let a = sin(deltaLat / 2) * sin(deltaLat / 2) +
-                cos(lat1Rad) * cos(lat2Rad) *
-                sin(deltaLon / 2) * sin(deltaLon / 2)
+            cos(lat1Rad) * cos(lat2Rad) *
+            sin(deltaLon / 2) * sin(deltaLon / 2)
 
         let c = 2 * atan2(sqrt(a), sqrt(1 - a))
 
