@@ -91,6 +91,12 @@
 --enable wrapArguments
 --enable wrapAttributes
 
+# Number formatting
+--decimalgrouping 3,4
+--binarygrouping 4,8
+--octalgrouping 4,8
+--hexgrouping 4,8
+
 # Disable rules that might conflict with project style
 --disable andOperator
 --disable acronyms
