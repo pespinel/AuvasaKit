@@ -108,7 +108,9 @@ disabled_rules:
   - file_header # Can be added later when project matures
   - file_name # Allow generic file names like Types.swift
   - function_default_parameter_at_end # Sometimes order matters for API design
+  - pattern_matching_keywords # Conflicts with SwiftFormat preferences
   - conditional_returns_on_newline # Too strict for simple returns
+  - opening_brace # Conflicts with SwiftFormat multiline guard formatting
 
 # Custom rule configuration
 line_length:
