@@ -25,12 +25,19 @@ public enum VehicleStatus: String, Sendable, Codable {
 
 // MARK: - Schedule Relationship
 
-/// Defines how the trip or stop time relates to the schedule
+/// Defines how the trip relates to the schedule
 public enum ScheduleRelationship: String, Sendable, Codable {
+    case scheduled = "SCHEDULED"
+    case added = "ADDED"
+    case unscheduled = "UNSCHEDULED"
+    case canceled = "CANCELED"
+}
+
+/// Defines how a stop time update relates to the schedule
+public enum StopTimeScheduleRelationship: String, Sendable, Codable {
     case scheduled = "SCHEDULED"
     case skipped = "SKIPPED"
     case noData = "NO_DATA"
-    case unscheduled = "UNSCHEDULED"
 }
 
 // MARK: - Alert Severity
@@ -47,7 +54,7 @@ public enum SeverityLevel: Int, Sendable, Codable {
 
 /// The cause of a service alert
 public enum AlertCause: String, Sendable, Codable {
-    case unknownCause = "UNKNOWN_CAUSE"
+    case unknown = "UNKNOWN"
     case otherCause = "OTHER_CAUSE"
     case technicalProblem = "TECHNICAL_PROBLEM"
     case strike = "STRIKE"

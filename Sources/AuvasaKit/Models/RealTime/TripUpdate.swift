@@ -48,7 +48,7 @@ public struct TripUpdate: Identifiable, Sendable, Equatable, Codable {
 /// Represents timing information for a specific stop in a trip
 public struct StopTimeUpdate: Sendable, Equatable, Codable {
     /// Stop sequence number
-    public let stopSequence: Int
+    public let stopSequence: Int?
 
     /// Stop ID
     public let stopId: String?
@@ -60,7 +60,7 @@ public struct StopTimeUpdate: Sendable, Equatable, Codable {
     public let departure: TimeEvent?
 
     /// Schedule relationship for this stop
-    public let scheduleRelationship: ScheduleRelationship
+    public let scheduleRelationship: StopTimeScheduleRelationship
 
     /// Creates a new stop time update
     /// - Parameters:
@@ -70,11 +70,11 @@ public struct StopTimeUpdate: Sendable, Equatable, Codable {
     ///   - departure: Departure time event
     ///   - scheduleRelationship: Schedule relationship
     public init(
-        stopSequence: Int,
+        stopSequence: Int? = nil,
         stopId: String? = nil,
         arrival: TimeEvent? = nil,
         departure: TimeEvent? = nil,
-        scheduleRelationship: ScheduleRelationship = .scheduled
+        scheduleRelationship: StopTimeScheduleRelationship = .scheduled
     ) {
         self.stopSequence = stopSequence
         self.stopId = stopId
