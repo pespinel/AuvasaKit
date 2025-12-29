@@ -43,7 +43,7 @@
 
 # Declarations
 --extensionacl on-declarations
---modifierorder override,public,internal,fileprivate,private,static,class,final,required,convenience,lazy,weak,dynamic,optional
+--modifierorder override,nonisolated,public,internal,fileprivate,private,static,class,final,required,convenience,lazy,weak,dynamic,optional
 
 # Imports
 --importgrouping testable-bottom
@@ -85,7 +85,6 @@
 --enable redundantSelf
 --enable redundantVoidReturnType
 --enable trailingClosures
---enable trailingCommas
 --enable unusedArguments
 --enable void
 --enable wrapArguments
@@ -103,3 +102,4 @@
 --disable blankLinesBetweenScopes
 --disable sortDeclarations
 --disable organizeDeclarations
+--disable trailingCommas
