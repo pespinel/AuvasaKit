@@ -52,6 +52,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - SwiftFormat configuration updated to align with SwiftLint (extensionacl on-extension)
+- Updated SwiftProtobuf API from deprecated `serializedData` to `serializedBytes`
+- Increased type_body_length warning threshold from 300 to 350 lines
+
+### Fixed
+
+- iOS build compatibility by adding platform-specific conditionals for `Process` usage in GTFSImporter
+- GTFSImporter now provides appropriate error messages on iOS with suggestions for ZIP extraction alternatives
+
+### Documentation
+
+- Complete DocC catalog with 7 comprehensive guides
+- GitHub Pages deployment workflow for automatic documentation publishing
+- Installation guide with SPM integration
+- Getting Started tutorial with code examples
+- Real-Time Data guide covering vehicle positions, trip updates, and alerts
+- Subscriptions guide with AsyncStream patterns and SwiftUI integration
+- Static Data guide for GTFS queries (stops, routes, schedules)
+- Advanced Search guide with geographic, text, and time-based search patterns
 
 ### Technical Details
 

@@ -1,8 +1,11 @@
 # AuvasaKit
 
 [![Swift](https://img.shields.io/badge/Swift-5.9+-orange.svg)](https://swift.org)
-[![Platform](https://img.shields.io/badge/Platform-iOS%2015%2B-blue.svg)](https://developer.apple.com/ios/)
+[![Platform](https://img.shields.io/badge/Platform-iOS%2015%2B%20%7C%20macOS%2012%2B-blue.svg)](https://developer.apple.com/ios/)
 [![SPM](https://img.shields.io/badge/SPM-compatible-brightgreen.svg)](https://swift.org/package-manager/)
+[![CI](https://github.com/pespinel/AuvasaKit/actions/workflows/ci.yml/badge.svg)](https://github.com/pespinel/AuvasaKit/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/pespinel/AuvasaKit/branch/main/graph/badge.svg)](https://codecov.io/gh/pespinel/AuvasaKit)
+[![Documentation](https://img.shields.io/badge/docs-online-brightgreen.svg)](https://pespinel.github.io/AuvasaKit/documentation/auvasakit)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A modern Swift SDK for accessing **AUVASA** (Autobuses Urbanos de Valladolid) data through GTFS Real-Time and static GTFS feeds.
@@ -43,21 +46,63 @@ import AuvasaKit
 // Initialize the client
 let client = AuvasaClient()
 
-// Get real-time vehicle positions
-let positions = try await client.fetchVehiclePositions()
+// 1️⃣ Import static GTFS data (first time only)
+try await client.updateStaticData()
+
+// 2️⃣ Find nearby stops
+let userLocation = Coordinate(latitude: 41.6523, longitude: -4.7245)
+let stops = try await client.findNearbyStops(
+    coordinate: userLocation,
+    radiusMeters: 500
+)
+
+// 3️⃣ Get next arrivals (combines schedules + real-time)
+let arrivals = try await client.getNextArrivals(stopId: "813", limit: 5)
+for arrival in arrivals {
+    let delay = arrival.delay ?? 0
+    print("\(arrival.route.shortName): \(arrival.bestTime) (delay: \(delay)s)")
+}
+
+// 4️⃣ Track buses in real-time
+let positions = try await client.fetchVehiclePositions(routeId: "L1")
 for position in positions {
     print("Bus \(position.vehicle.label ?? ""): \(position.position)")
 }
 
-// Find nearby stops
-let stops = try await client.findNearbyStops(
-    coordinate: Coordinate(latitude: 41.6523, longitude: -4.7245),
-    radiusMeters: 500
-)
-
-// Subscribe to live updates
+// 5️⃣ Subscribe to live updates
 for await updates in client.subscribeToTripUpdates(stopId: "813") {
-    print("Updated arrivals: \(updates.count)")
+    print("📍 Updated arrivals: \(updates.count)")
+}
+```
+
+### SwiftUI Example
+
+```swift
+struct BusMapView: View {
+    @State private var vehicles: [VehiclePosition] = []
+    @State private var subscriptionTask: Task<Void, Never>?
+
+    var body: some View {
+        Map {
+            ForEach(vehicles) { vehicle in
+                Annotation(vehicle.vehicle.label ?? "?",
+                          coordinate: vehicle.position.clLocation) {
+                    Image(systemName: "bus.fill")
+                        .foregroundColor(.blue)
+                }
+            }
+        }
+        .onAppear {
+            subscriptionTask = Task {
+                for await positions in client.subscribeToVehiclePositions() {
+                    vehicles = positions
+                }
+            }
+        }
+        .onDisappear {
+            subscriptionTask?.cancel()
+        }
+    }
 }
 ```
 
@@ -67,25 +112,22 @@ for await updates in client.subscribeToTripUpdates(stopId: "813") {
 - Swift 5.9+
 - Xcode 15.0+
 
-## 🏗️ Project Status
-
-**Current Status**: 🚧 In Development
-
-This project is in active development. Implementation follows a structured phase plan:
-
-- [x] **Phase 0**: Planning and architecture design
-- [x] **Phase 1**: Project foundation (base structure, Package.swift)
-- [ ] **Phase 2**: Real-time data (networking, protobuf parsing)
-- [ ] **Phase 3**: Public API and caching
-- [ ] **Phase 4**: Real-time subscriptions
-- [ ] **Phase 5**: Static GTFS data
-- [ ] **Phase 6**: Advanced features
-- [ ] **Phase 7**: Documentation
-- [ ] **Phase 8**: Testing and v1.0.0 release
-
 ## 📚 Documentation
 
-_(Full documentation coming soon with DocC)_
+**📖 [Read the full documentation](https://pespinel.github.io/AuvasaKit/documentation/auvasakit)**
+
+### Guides
+
+- [Installation](https://pespinel.github.io/AuvasaKit/documentation/auvasakit/installation) - Setup with Swift Package Manager
+- [Getting Started](https://pespinel.github.io/AuvasaKit/documentation/auvasakit/gettingstarted) - Quick start tutorial
+- [Real-Time Data](https://pespinel.github.io/AuvasaKit/documentation/auvasakit/realtimedata) - Vehicle positions, trip updates, alerts
+- [Subscriptions](https://pespinel.github.io/AuvasaKit/documentation/auvasakit/subscriptions) - AsyncStream patterns for live updates
+- [Static Data](https://pespinel.github.io/AuvasaKit/documentation/auvasakit/staticdata) - GTFS queries (stops, routes, schedules)
+- [Search Examples](https://pespinel.github.io/AuvasaKit/documentation/auvasakit/searches) - Advanced search patterns
+
+### API Reference
+
+Browse the complete API documentation including all public types, methods, and properties in the [online documentation](https://pespinel.github.io/AuvasaKit/documentation/auvasakit).
 
 ### AUVASA Endpoints
 
