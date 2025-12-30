@@ -79,19 +79,37 @@ public actor GTFSImporter {
 
     private func downloadGTFSZip() async throws -> Data {
         do {
+            Logger.database.info("Starting GTFS download from: \(gtfsURL.absoluteString)")
             let (data, response) = try await URLSession.shared.data(from: gtfsURL)
 
             guard
                 let httpResponse = response as? HTTPURLResponse,
                 httpResponse.statusCode == 200 else
             {
+                Logger.database
+                    .error("HTTP request failed with status: \((response as? HTTPURLResponse)?.statusCode ?? -1)")
                 throw ImportError.downloadFailed(
                     URLError(.badServerResponse)
                 )
             }
 
+            let sizeInMB = String(format: "%.2f", Double(data.count) / 1_024 / 1_024)
+            Logger.database.info("Downloaded \(data.count) bytes (\(sizeInMB) MB)")
+
+            let firstBytes = data.prefix(4).map { String(format: "%02X", $0) }.joined(separator: " ")
+            Logger.database.debug("First 4 bytes: \(firstBytes)")
+
+            // Verify it's a valid ZIP file (should start with PK signature: 50 4B 03 04)
+            let zipSignature = Data([0x50, 0x4B, 0x03, 0x04])
+            if data.prefix(4) != zipSignature {
+                Logger.database.error("Invalid ZIP signature! Expected: 50 4B 03 04, got: \(firstBytes)")
+                throw ImportError.invalidZipData
+            }
+
+            Logger.database.info("Valid ZIP file confirmed")
             return data
         } catch {
+            Logger.database.error("Download failed", error: error)
             throw ImportError.downloadFailed(error)
         }
     }
@@ -99,6 +117,9 @@ public actor GTFSImporter {
     // MARK: - Extraction
 
     private func extractCSVFiles(from zipData: Data) throws -> [String: String] {
+        Logger.database.info("Starting ZIP extraction...")
+        Logger.database.debug("ZIP data size: \(zipData.count) bytes")
+
         // Create temporary directory
         let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
@@ -110,11 +131,23 @@ public actor GTFSImporter {
         // Write ZIP to temp file
         let zipFile = tempDir.appendingPathComponent("gtfs.zip")
         try zipData.write(to: zipFile)
+        Logger.database.debug("Wrote ZIP to temporary file: \(zipFile.path)")
+
+        // Verify file was written correctly
+        let writtenSize = (try? FileManager.default.attributesOfItem(atPath: zipFile.path)[.size] as? Int) ?? 0
+        Logger.database.debug("Verified file size on disk: \(writtenSize) bytes")
+
+        if writtenSize != zipData.count {
+            Logger.database.warning("File size mismatch: written=\(writtenSize), expected=\(zipData.count)")
+        }
 
         // Extract ZIP using ZIPFoundation (cross-platform)
         do {
+            Logger.database.info("Extracting ZIP contents...")
             try FileManager.default.unzipItem(at: zipFile, to: tempDir)
+            Logger.database.info("ZIP extracted successfully")
         } catch {
+            Logger.database.error("ZIP extraction failed", error: error)
             throw ImportError.extractionFailed(error)
         }
 

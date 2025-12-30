@@ -72,10 +72,7 @@ final class GTFSImporterTests: XCTestCase {
 
     func testExtractInvalidZipData_ThrowsError() throws {
         // Create invalid ZIP data
-        guard let invalidData = Data("This is not a ZIP file".utf8) else {
-            XCTFail("Failed to create test data")
-            return
-        }
+        let invalidData = Data("This is not a ZIP file".utf8)
 
         let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
