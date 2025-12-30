@@ -1,5 +1,6 @@
 import CoreData
 import Foundation
+import ZIPFoundation
 
 /// Imports GTFS static data from AUVASA's ZIP file
 public actor GTFSImporter {
@@ -110,39 +111,12 @@ public actor GTFSImporter {
         let zipFile = tempDir.appendingPathComponent("gtfs.zip")
         try zipData.write(to: zipFile)
 
-        // Extract ZIP using platform-specific methods
-        #if os(macOS)
-        // macOS: Use Process to run unzip command
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
-        process.arguments = ["-q", zipFile.path, "-d", tempDir.path]
-
+        // Extract ZIP using ZIPFoundation (cross-platform)
         do {
-            try process.run()
-            process.waitUntilExit()
-
-            guard process.terminationStatus == 0 else {
-                throw ImportError.invalidZipData
-            }
+            try FileManager.default.unzipItem(at: zipFile, to: tempDir)
         } catch {
             throw ImportError.extractionFailed(error)
         }
-        #else
-        // iOS/other platforms: ZIP extraction via Process is not available
-        // In a production app, you would:
-        // 1. Use a ZIP library like ZipFoundation
-        // 2. Download pre-extracted GTFS files
-        // 3. Bundle GTFS data with the app
-        throw ImportError.extractionFailed(
-            NSError(
-                domain: "GTFSImporter",
-                code: 1,
-                userInfo: [
-                    NSLocalizedDescriptionKey: "ZIP extraction requires macOS. On iOS, consider using a ZIP library or pre-extracted GTFS data."
-                ]
-            )
-        )
-        #endif
 
         // Read CSV files
         var csvFiles: [String: String] = [:]
