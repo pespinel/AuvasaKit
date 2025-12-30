@@ -52,7 +52,7 @@ public enum APIEndpoint {
     }()
 
     private static let staticDataURL: URL = {
-        guard let url = URL(string: "https://www.auvasa.es/wp-file-download/datos-gtfs/") else {
+        guard let url = URL(string: "http://212.170.201.204:50080/GTFSRTapi/api/GTFSFile") else {
             fatalError("Invalid static data URL")
         }
         return url

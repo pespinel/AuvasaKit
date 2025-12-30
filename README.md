@@ -139,7 +139,7 @@ The SDK uses the following public AUVASA endpoints:
 - Alerts: `http://212.170.201.204:50080/GTFSRTapi/api/alert`
 
 **GTFS Static (ZIP)**:
-- Static data: `https://www.auvasa.es/wp-file-download/datos-gtfs/`
+- Static data: `http://212.170.201.204:50080/GTFSRTapi/api/GTFSFile`
 
 ## 🤝 Contributing
 

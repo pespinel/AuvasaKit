@@ -14,7 +14,11 @@ final class GTFSImporterTests: XCTestCase {
         setenv("AUVASA_IN_MEMORY", "1", 1)
         databaseManager = DatabaseManager.shared
         guard let databaseManager else {
-            throw NSError(domain: "Test", code: 1, userInfo: [NSLocalizedDescriptionKey: "Failed to initialize database"])
+            throw NSError(
+                domain: "Test",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "Failed to initialize database"]
+            )
         }
         importer = GTFSImporter(databaseManager: databaseManager)
     }
