@@ -465,6 +465,26 @@ public actor AuvasaClient {
         try await scheduleService.fetchStopTimes(stopId: stopId, date: date)
     }
 
+    /// Gets all stop times for a specific trip in order
+    ///
+    /// Returns the complete list of stops for a trip in the correct sequence,
+    /// useful for showing the full route and calculating remaining stops.
+    ///
+    /// - Parameter tripId: Trip identifier
+    /// - Returns: Array of stop times sorted by stop sequence
+    /// - Throws: Database errors if query fails
+    ///
+    /// Example:
+    /// ```swift
+    /// let stopTimes = try await client.getStopTimes(tripId: "L6A6_L6A4_17")
+    /// for stopTime in stopTimes {
+    ///     print("\(stopTime.stopSequence): Stop \(stopTime.stopId) at \(stopTime.departureTime)")
+    /// }
+    /// ```
+    public func getStopTimes(tripId: String) async throws -> [StopTime] {
+        try await scheduleService.fetchStopTimes(tripId: tripId)
+    }
+
     /// Fetches upcoming departures from a stop
     ///
     /// - Parameters:

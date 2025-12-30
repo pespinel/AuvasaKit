@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `getStopTimes(tripId:)` - Public API to get all stop times for a trip in sequence order
+
 ### Fixed
 
 - GTFS static data download URL updated to use direct API endpoint (`http://212.170.201.204:50080/GTFSRTapi/api/GTFSFile`) instead of WordPress file download page
