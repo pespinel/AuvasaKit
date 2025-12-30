@@ -25,6 +25,7 @@ extension AuvasaClient {
     }
 
     /// Builds arrivals from stop times and trip updates
+    /// Filters out trips whose service is not active on the current date
     func buildArrivals(
         from stopTimes: [StopTime],
         stopId: String,
@@ -39,6 +40,16 @@ extension AuvasaClient {
                 let route = try await routeService.fetchRoute(id: trip.routeId),
                 let scheduledDate = convertStopTimeToDate(stopTime.departureTime, on: now) else
             {
+                continue
+            }
+
+            // Filter out trips whose service is not active today
+            // This prevents showing trips from special calendars (holidays, etc.)
+            let isActive = try await scheduleService.isServiceActive(serviceId: trip.serviceId, on: now)
+            guard isActive else {
+                Logger.database.debug(
+                    "Skipping trip \(trip.id) with inactive service \(trip.serviceId)"
+                )
                 continue
             }
 

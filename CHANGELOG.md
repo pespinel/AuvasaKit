@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - GTFS static data download URL updated to use direct API endpoint (`http://212.170.201.204:50080/GTFSRTapi/api/GTFSFile`) instead of WordPress file download page
+- `getNextArrivals()` now filters trips by active service calendar, preventing duplicate arrivals from inactive holiday/special schedules (NAV, NCH variants)
 
 ## [1.0]
 
