@@ -2,19 +2,45 @@ import Foundation
 
 /// Main client for accessing AUVASA bus data
 ///
-/// AuvasaClient provides a simple interface to access real-time GTFS data
+/// AuvasaClient provides a simple interface to access GTFS static and GTFS-RT data
 /// from AUVASA (Autobuses Urbanos de Valladolid).
+///
+/// ## Data Sources
+///
+/// This SDK accesses two distinct data sources:
+///
+/// ### GTFS Static Data (Schedule)
+/// - Routes, stops, trips, calendars
+/// - Planned schedules and timetables
+/// - Methods: `getScheduledDepartures()`, `fetchRoutes()`, `getStop()`, etc.
+/// - Updated: Periodically via `updateStaticData()`
+///
+/// ### GTFS-RT Data (Real-Time)
+/// - Vehicle positions, trip updates, service alerts
+/// - Live predictions and current status
+/// - Methods: `fetchVehiclePositions()`, `fetchTripUpdates()`, `getRealtimeArrivals()`, `fetchAlerts()`
+/// - Updated: Continuously from AUVASA real-time feed
+/// - **Note**: `getRealtimeArrivals()` requires GTFS static data to match stop sequences with stop IDs
+///
+/// **Important**: Methods are separated by data source to avoid confusion.
+/// Do not mix static schedule data with real-time data unless explicitly needed.
 ///
 /// Example usage:
 /// ```swift
 /// let client = AuvasaClient()
 ///
-/// // Fetch vehicle positions
+/// // GTFS-RT: Fetch real-time vehicle positions
 /// let vehicles = try await client.fetchVehiclePositions()
 ///
-/// // Get nearby vehicles
+/// // GTFS-RT: Get real-time arrivals at a stop
+/// let arrivals = try await client.getRealtimeArrivals(stopId: "123")
+///
+/// // GTFS Static: Get scheduled departures
+/// let schedule = try await client.getScheduledDepartures(stopId: "123")
+///
+/// // GTFS Static: Find nearby stops
 /// let coordinate = Coordinate(latitude: 41.6523, longitude: -4.7245)
-/// let nearby = try await client.findNearbyVehicles(
+/// let stops = try await client.findNearbyStops(
 ///     coordinate: coordinate,
 ///     radiusMeters: 500
 /// )
@@ -60,11 +86,11 @@ public actor AuvasaClient {
     /// - Parameter configuration: Client configuration
     public init(configuration: Configuration = .default) {
         let apiClient = APIClient(timeout: configuration.timeout)
-        self.realtimeService = RealtimeService(apiClient: apiClient)
         self.databaseManager = configuration.databaseManager
         self.stopService = StopService(databaseManager: databaseManager)
         self.routeService = RouteService(databaseManager: databaseManager)
         self.scheduleService = ScheduleService(databaseManager: databaseManager)
+        self.realtimeService = RealtimeService(apiClient: apiClient, scheduleService: scheduleService)
         self.gtfsImporter = GTFSImporter(databaseManager: databaseManager)
         self.subscriptionManager = SubscriptionManager(
             realtimeService: realtimeService,
@@ -164,50 +190,64 @@ public actor AuvasaClient {
         try await realtimeService.fetchTripUpdates(stopId: stopId)
     }
 
-    /// Gets next arrivals at a stop combining schedule and real-time data
+    /// Gets scheduled departures at a stop from GTFS static data only
     ///
-    /// This method merges static GTFS schedule data with live trip updates
-    /// to provide accurate arrival predictions. It shows scheduled times
-    /// along with real-time estimates and delays when available.
+    /// Returns only static schedule data without real-time updates.
+    /// Use `fetchTripUpdates(stopId:)` for real-time predictions.
     ///
     /// - Parameters:
     ///   - stopId: The stop ID
-    ///   - limit: Maximum number of arrivals to return (default: 5)
-    /// - Returns: Array of arrivals sorted by best available time
-    /// - Throws: `NetworkError` if the request fails, database errors if query fails
+    ///   - limit: Maximum number of departures to return (default: 10)
+    /// - Returns: Array of scheduled stop times
+    /// - Throws: Database errors if query fails
     ///
     /// Example:
     /// ```swift
-    /// let nextBuses = try await client.getNextArrivals(stopId: "123", limit: 3)
-    /// for arrival in nextBuses {
-    ///     if arrival.realtimeAvailable {
-    ///         print("\(arrival.route.shortName): \(arrival.estimatedTime!) (\(arrival.delayDescription ?? ""))")
-    ///     } else {
-    ///         print("\(arrival.route.shortName): \(arrival.scheduledTime) (scheduled)")
+    /// // Get scheduled departures (GTFS static only)
+    /// let schedule = try await client.getScheduledDepartures(stopId: "123", limit: 5)
+    /// for stopTime in schedule {
+    ///     print("\(stopTime.tripId): \(stopTime.departureTime)")
+    /// }
+    /// ```
+    public func getScheduledDepartures(
+        stopId: String,
+        limit: Int = 10
+    ) async throws -> [StopTime] {
+        let currentTime = getCurrentTimeString()
+        return try await scheduleService.fetchUpcomingDepartures(
+            stopId: stopId,
+            afterTime: currentTime,
+            limit: limit
+        )
+    }
+
+    /// Gets next real-time arrivals at a stop from GTFS-RT data
+    ///
+    /// Returns real-time trip updates for buses arriving at the specified stop.
+    /// Uses GTFS static data to match stopSequence with stopId since GTFS-RT
+    /// only includes stopSequence numbers.
+    ///
+    /// - Parameters:
+    ///   - stopId: The stop ID
+    ///   - limit: Maximum number of arrivals to return (default: 10)
+    /// - Returns: Array of trip updates sorted by arrival time
+    /// - Throws: `NetworkError` if the request fails, `DatabaseError` if GTFS data not available
+    ///
+    /// Example:
+    /// ```swift
+    /// let arrivals = try await client.getRealtimeArrivals(stopId: "123", limit: 5)
+    /// for update in arrivals {
+    ///     print("Trip \(update.trip.tripId ?? "?")")
+    ///     if let delay = update.delay {
+    ///         print("  Delay: \(delay)s")
     ///     }
     /// }
     /// ```
-    public func getNextArrivals(
+    public func getRealtimeArrivals(
         stopId: String,
-        limit: Int = 5
-    ) async throws -> [Arrival] {
-        let currentTime = getCurrentTimeString()
-        let stopTimes = try await scheduleService.fetchUpcomingDepartures(
-            stopId: stopId,
-            afterTime: currentTime,
-            limit: limit * 3
-        )
-
-        let tripUpdates = try await realtimeService.fetchTripUpdates(stopId: stopId)
-        let tripUpdateMap = createTripUpdateMap(from: tripUpdates)
-
-        let arrivals = try await buildArrivals(
-            from: stopTimes,
-            stopId: stopId,
-            tripUpdateMap: tripUpdateMap
-        )
-
-        return Array(arrivals.sorted { $0.bestTime < $1.bestTime }.prefix(limit))
+        limit: Int = 10
+    ) async throws -> [TripUpdate] {
+        try await realtimeService.fetchRealtimeArrivals(stopId: stopId, limit: limit)
     }
 
     // MARK: - Service Alerts
@@ -584,13 +624,17 @@ public actor AuvasaClient {
 
     // MARK: - Advanced Features
 
-    /// Gets complete details for a specific trip with real-time updates
+    /// Gets complete details for a specific trip
+    ///
+    /// **Note**: This method combines GTFS static data (trip, route, schedule)
+    /// with GTFS-RT data (vehicle position, delays). The combination is useful
+    /// for displaying complete trip information but be aware it mixes data sources.
     ///
     /// Provides comprehensive information about a trip including all stops,
     /// schedule, real-time vehicle position, delays, and trip progress.
     ///
     /// - Parameter tripId: Trip identifier
-    /// - Returns: Complete trip details with real-time data
+    /// - Returns: Complete trip details combining static and real-time data
     /// - Throws: Database errors if query fails, or if trip not found
     ///
     /// Example:

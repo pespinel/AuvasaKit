@@ -4,12 +4,16 @@ import Foundation
 public actor RealtimeService {
     private let apiClient: APIClient
     private let parser: ProtobufParser
+    private let scheduleService: ScheduleService
 
     /// Creates a new real-time service
-    /// - Parameter apiClient: The API client to use for network requests
-    public init(apiClient: APIClient = APIClient()) {
+    /// - Parameters:
+    ///   - apiClient: The API client to use for network requests
+    ///   - scheduleService: Schedule service for accessing GTFS static data
+    public init(apiClient: APIClient = APIClient(), scheduleService: ScheduleService) {
         self.apiClient = apiClient
         self.parser = ProtobufParser()
+        self.scheduleService = scheduleService
     }
 
     // MARK: - Vehicle Positions
@@ -70,6 +74,61 @@ public actor RealtimeService {
                 stopTime.stopId == stopId
             }
         }
+    }
+    
+    /// Fetches real-time arrivals at a stop with future arrival times
+    ///
+    /// Combines GTFS-RT trip updates with GTFS static data to match stopSequence
+    /// with stopId, since AUVASA's GTFS-RT feed only includes stopSequence.
+    ///
+    /// - Parameters:
+    ///   - stopId: The stop ID to get arrivals for
+    ///   - limit: Maximum number of arrivals to return
+    /// - Returns: Array of trip updates sorted by arrival time
+    /// - Throws: NetworkError or ParsingError if the request fails
+    public func fetchRealtimeArrivals(stopId: String, limit: Int = 10) async throws -> [TripUpdate] {
+        let allUpdates = try await fetchTripUpdates()
+        let now = Date()
+        
+        // GTFS-RT from AUVASA doesn't include stopId, only stopSequence
+        // We need to match using trip data from GTFS static
+        var futureArrivals: [(TripUpdate, Date)] = []
+        
+        for update in allUpdates {
+            guard let tripId = update.trip.tripId else { continue }
+            
+            // Get stop times for this trip from GTFS static data
+            let stopTimes: [StopTime]
+            do {
+                stopTimes = try await scheduleService.fetchStopTimes(tripId: tripId)
+            } catch {
+                // If GTFS data not available, skip this trip
+                continue
+            }
+            
+            // Find stop time updates that match this stop
+            for stopUpdate in update.stopTimeUpdates {
+                guard let sequence = stopUpdate.stopSequence else { continue }
+                
+                // Match stopSequence with stopId from static data
+                if let stopTime = stopTimes.first(where: { $0.stopSequence == sequence }),
+                   stopTime.stopId == stopId,
+                   let arrival = stopUpdate.arrival,
+                   let arrivalTime = arrival.time,
+                   arrivalTime > now {
+                    futureArrivals.append((update, arrivalTime))
+                    break
+                }
+            }
+        }
+        
+        // Sort by arrival time and limit
+        let sorted = futureArrivals
+            .sorted { $0.1 < $1.1 }
+            .prefix(limit)
+            .map { $0.0 }
+        
+        return Array(sorted)
     }
 
     // MARK: - Alerts
