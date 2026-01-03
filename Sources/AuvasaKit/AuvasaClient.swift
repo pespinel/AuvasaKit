@@ -300,23 +300,23 @@ public actor AuvasaClient {
         )
 
         // Deduplicate by tripId (keep only first occurrence of each trip)
-        Logger.database.debug("Before deduplication: \(arrivals.count) arrivals")
+        Logger.database.info("🔍 Before deduplication: \(arrivals.count) arrivals")
         var seenTripIds = Set<String>()
         let uniqueArrivals = arrivals.filter { arrival in
             let tripId = arrival.trip.id
             let isDuplicate = seenTripIds.contains(tripId)
             if isDuplicate {
-                Logger.database.debug("Filtering duplicate tripId: \(tripId)")
+                Logger.database.info("🔍 Filtering duplicate tripId: \(tripId)")
                 return false
             }
             seenTripIds.insert(tripId)
             return true
         }
-        Logger.database.debug("After deduplication: \(uniqueArrivals.count) unique arrivals")
+        Logger.database.info("🔍 After deduplication: \(uniqueArrivals.count) unique arrivals")
 
         // Sort by best time and limit
         let sorted = Array(uniqueArrivals.sorted { $0.bestTime < $1.bestTime }.prefix(limit))
-        Logger.database.debug("After sorting and limiting to \(limit): \(sorted.count) arrivals")
+        Logger.database.info("🔍 After sorting and limiting to \(limit): \(sorted.count) arrivals")
         return sorted
     }
 
