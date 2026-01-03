@@ -5,7 +5,8 @@ import XCTest
 
 final class RealtimeServiceTests: XCTestCase {
     func testServiceInitialization() {
-        let service = RealtimeService()
+        let scheduleService = ScheduleService()
+        let service = RealtimeService(scheduleService: scheduleService)
         XCTAssertNotNil(service)
     }
 
