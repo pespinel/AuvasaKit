@@ -302,7 +302,10 @@ public actor AuvasaClient {
         // Deduplicate by tripId (keep only first occurrence of each trip)
         Logger.database.info("🔍 Before deduplication: \(arrivals.count) arrivals")
         for arrival in arrivals {
-            Logger.database.info("  📍 Route \(arrival.route.shortName) → \(arrival.trip.headsign ?? "?") at \(arrival.bestTime) [TripID: \(arrival.trip.id)]")
+            Logger.database
+                .info(
+                    "  📍 Route \(arrival.route.shortName) → \(arrival.trip.headsign ?? "?") at \(arrival.bestTime) [TripID: \(arrival.trip.id)]"
+                )
         }
 
         var seenTripIds = Set<String>()
