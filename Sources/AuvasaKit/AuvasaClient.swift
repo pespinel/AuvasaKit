@@ -286,8 +286,8 @@ public actor AuvasaClient {
         stopId: String,
         limit: Int = 10
     ) async throws -> [Arrival] {
-        // Get scheduled departures (we fetch more than limit to account for filtering)
-        let scheduled = try await getScheduledDepartures(stopId: stopId, limit: limit * 2)
+        // Get scheduled departures (we fetch more than limit to account for filtering and duplicates)
+        let scheduled = try await getScheduledDepartures(stopId: stopId, limit: limit * 3)
 
         // Get all real-time updates
         let realtimeUpdates = try await realtimeService.fetchTripUpdates()
@@ -299,8 +299,19 @@ public actor AuvasaClient {
             realtimeUpdates: realtimeUpdates
         )
 
+        // Deduplicate by tripId (keep only first occurrence of each trip)
+        var seenTripIds = Set<String>()
+        let uniqueArrivals = arrivals.filter { arrival in
+            let tripId = arrival.trip.id
+            if seenTripIds.contains(tripId) {
+                return false
+            }
+            seenTripIds.insert(tripId)
+            return true
+        }
+
         // Sort by best time and limit
-        return Array(arrivals
+        return Array(uniqueArrivals
             .sorted { $0.bestTime < $1.bestTime }
             .prefix(limit))
     }
