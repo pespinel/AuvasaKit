@@ -299,7 +299,8 @@ public actor AuvasaClient {
             realtimeUpdates: realtimeUpdates
         )
 
-        // Deduplicate by tripId (keep only first occurrence of each trip)
+        // Deduplicate by route + scheduled time
+        // Multiple trips of the same route arriving at the same time are shown as one arrival
         Logger.database.info("🔍 Before deduplication: \(arrivals.count) arrivals")
         for arrival in arrivals {
             Logger.database
@@ -308,15 +309,19 @@ public actor AuvasaClient {
                 )
         }
 
-        var seenTripIds = Set<String>()
+        var seenRouteTimestamps = Set<String>()
         let uniqueArrivals = arrivals.filter { arrival in
-            let tripId = arrival.trip.id
-            let isDuplicate = seenTripIds.contains(tripId)
+            // Create unique key: routeId + scheduled time (rounded to minute)
+            let timeInterval = arrival.scheduledTime.timeIntervalSince1970
+            let roundedTime = Int(timeInterval / 60) * 60 // Round to minute
+            let uniqueKey = "\(arrival.route.id)_\(roundedTime)"
+
+            let isDuplicate = seenRouteTimestamps.contains(uniqueKey)
             if isDuplicate {
-                Logger.database.info("🔍 Filtering duplicate tripId: \(tripId)")
+                Logger.database.info("🔍 Filtering duplicate: Route \(arrival.route.shortName) at \(arrival.scheduledTime) [TripID: \(arrival.trip.id)]")
                 return false
             }
-            seenTripIds.insert(tripId)
+            seenRouteTimestamps.insert(uniqueKey)
             return true
         }
         Logger.database.info("🔍 After deduplication: \(uniqueArrivals.count) unique arrivals")
