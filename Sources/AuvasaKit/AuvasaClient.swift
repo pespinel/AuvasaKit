@@ -250,6 +250,61 @@ public actor AuvasaClient {
         try await realtimeService.fetchRealtimeArrivals(stopId: stopId, limit: limit)
     }
 
+    /// Gets next arrivals at a stop combining GTFS static and real-time data
+    ///
+    /// Returns complete arrival information for buses arriving at the specified stop,
+    /// combining scheduled data with real-time updates when available.
+    /// Uses smart matching to correlate GTFS-RT updates with scheduled trips.
+    ///
+    /// - Parameters:
+    ///   - stopId: The stop ID
+    ///   - limit: Maximum number of arrivals to return (default: 10)
+    /// - Returns: Array of arrivals with complete information sorted by time
+    /// - Throws: `DatabaseError` if GTFS data not available, `NetworkError` if real-time fetch fails
+    ///
+    /// Example:
+    /// ```swift
+    /// let arrivals = try await client.getNextArrivals(stopId: "123", limit: 10)
+    /// for arrival in arrivals {
+    ///     let minutesUntil = Int(arrival.bestTime.timeIntervalSinceNow / 60)
+    ///     print("\(arrival.route.shortName) to \(arrival.trip.headsign ?? "?"): \(minutesUntil) min")
+    ///
+    ///     if let delay = arrival.delay {
+    ///         if delay < 0 {
+    ///             print("  \(abs(delay)/60) min early")
+    ///         } else if delay > 0 {
+    ///             print("  \(delay/60) min late")
+    ///         } else {
+    ///             print("  On time")
+    ///         }
+    ///     } else {
+    ///         print("  Scheduled (no real-time data)")
+    ///     }
+    /// }
+    /// ```
+    public func getNextArrivals(
+        stopId: String,
+        limit: Int = 10
+    ) async throws -> [Arrival] {
+        // Get scheduled departures (we fetch more than limit to account for filtering)
+        let scheduled = try await getScheduledDepartures(stopId: stopId, limit: limit * 2)
+
+        // Get all real-time updates
+        let realtimeUpdates = try await realtimeService.fetchTripUpdates()
+
+        // Build combined arrivals using smart matching strategies
+        let arrivals = try await buildArrivals(
+            from: scheduled,
+            stopId: stopId,
+            realtimeUpdates: realtimeUpdates
+        )
+
+        // Sort by best time and limit
+        return Array(arrivals
+            .sorted { $0.bestTime < $1.bestTime }
+            .prefix(limit))
+    }
+
     // MARK: - Service Alerts
 
     /// Fetches all current service alerts

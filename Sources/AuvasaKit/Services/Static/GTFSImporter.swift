@@ -223,29 +223,39 @@ public actor GTFSImporter {
             throw ImportError.missingRequiredFile("stops.txt")
         }
 
-        let context = await databaseManager.newBackgroundContext()
+        let records = parseCSV(csv)
+        let batchSize = 500
 
-        try await context.perform {
-            let records = self.parseCSV(csv)
+        Logger.database.info("Importing \(records.count) stops in batches of \(batchSize)")
 
-            for record in records {
-                let stop = GTFSStop(context: context)
-                stop.id = record["stop_id"] ?? ""
-                stop.code = record["stop_code"]
-                stop.name = record["stop_name"] ?? ""
-                stop.desc = record["stop_desc"]
-                stop.latitude = Double(record["stop_lat"] ?? "0") ?? 0
-                stop.longitude = Double(record["stop_lon"] ?? "0") ?? 0
-                stop.zoneId = record["zone_id"]
-                stop.url = record["stop_url"]
-                stop.locationType = Int16(record["location_type"] ?? "0") ?? 0
-                stop.parentStation = record["parent_station"]
-                stop.wheelchairBoarding = Int16(record["wheelchair_boarding"] ?? "0") ?? 0
-                stop.platformCode = record["platform_code"]
+        for batchStart in stride(from: 0, to: records.count, by: batchSize) {
+            let batchEnd = min(batchStart + batchSize, records.count)
+            let batch = Array(records[batchStart..<batchEnd])
+
+            let context = await databaseManager.newBackgroundContext()
+
+            try await context.perform {
+                for record in batch {
+                    let stop = GTFSStop(context: context)
+                    stop.id = record["stop_id"] ?? ""
+                    stop.code = record["stop_code"]
+                    stop.name = record["stop_name"] ?? ""
+                    stop.desc = record["stop_desc"]
+                    stop.latitude = Double(record["stop_lat"] ?? "0") ?? 0
+                    stop.longitude = Double(record["stop_lon"] ?? "0") ?? 0
+                    stop.zoneId = record["zone_id"]
+                    stop.url = record["stop_url"]
+                    stop.locationType = Int16(record["location_type"] ?? "0") ?? 0
+                    stop.parentStation = record["parent_station"]
+                    stop.wheelchairBoarding = Int16(record["wheelchair_boarding"] ?? "0") ?? 0
+                    stop.platformCode = record["platform_code"]
+                }
+
+                try context.save()
             }
-
-            try context.save()
         }
+
+        Logger.database.info("Completed importing stops")
     }
 
     // MARK: - Import Routes
@@ -255,27 +265,37 @@ public actor GTFSImporter {
             throw ImportError.missingRequiredFile("routes.txt")
         }
 
-        let context = await databaseManager.newBackgroundContext()
+        let records = parseCSV(csv)
+        let batchSize = 500
 
-        try await context.perform {
-            let records = self.parseCSV(csv)
+        Logger.database.info("Importing \(records.count) routes in batches of \(batchSize)")
 
-            for record in records {
-                let route = GTFSRoute(context: context)
-                route.id = record["route_id"] ?? ""
-                route.agencyId = record["agency_id"]
-                route.shortName = record["route_short_name"] ?? ""
-                route.longName = record["route_long_name"] ?? ""
-                route.desc = record["route_desc"]
-                route.type = Int16(record["route_type"] ?? "3") ?? 3
-                route.url = record["route_url"]
-                route.color = record["route_color"]
-                route.textColor = record["route_text_color"]
-                route.sortOrder = Int32(record["route_sort_order"] ?? "0") ?? 0
+        for batchStart in stride(from: 0, to: records.count, by: batchSize) {
+            let batchEnd = min(batchStart + batchSize, records.count)
+            let batch = Array(records[batchStart..<batchEnd])
+
+            let context = await databaseManager.newBackgroundContext()
+
+            try await context.perform {
+                for record in batch {
+                    let route = GTFSRoute(context: context)
+                    route.id = record["route_id"] ?? ""
+                    route.agencyId = record["agency_id"]
+                    route.shortName = record["route_short_name"] ?? ""
+                    route.longName = record["route_long_name"] ?? ""
+                    route.desc = record["route_desc"]
+                    route.type = Int16(record["route_type"] ?? "3") ?? 3
+                    route.url = record["route_url"]
+                    route.color = record["route_color"]
+                    route.textColor = record["route_text_color"]
+                    route.sortOrder = Int32(record["route_sort_order"] ?? "0") ?? 0
+                }
+
+                try context.save()
             }
-
-            try context.save()
         }
+
+        Logger.database.info("Completed importing routes")
     }
 
     // MARK: - Import Trips
@@ -285,27 +305,37 @@ public actor GTFSImporter {
             throw ImportError.missingRequiredFile("trips.txt")
         }
 
-        let context = await databaseManager.newBackgroundContext()
+        let records = parseCSV(csv)
+        let batchSize = 500
 
-        try await context.perform {
-            let records = self.parseCSV(csv)
+        Logger.database.info("Importing \(records.count) trips in batches of \(batchSize)")
 
-            for record in records {
-                let trip = GTFSTrip(context: context)
-                trip.id = record["trip_id"] ?? ""
-                trip.routeId = record["route_id"] ?? ""
-                trip.serviceId = record["service_id"] ?? ""
-                trip.headsign = record["trip_headsign"]
-                trip.shortName = record["trip_short_name"]
-                trip.directionId = Int16(record["direction_id"] ?? "0") ?? 0
-                trip.blockId = record["block_id"]
-                trip.shapeId = record["shape_id"]
-                trip.wheelchairAccessible = Int16(record["wheelchair_accessible"] ?? "0") ?? 0
-                trip.bikesAllowed = Int16(record["bikes_allowed"] ?? "0") ?? 0
+        for batchStart in stride(from: 0, to: records.count, by: batchSize) {
+            let batchEnd = min(batchStart + batchSize, records.count)
+            let batch = Array(records[batchStart..<batchEnd])
+
+            let context = await databaseManager.newBackgroundContext()
+
+            try await context.perform {
+                for record in batch {
+                    let trip = GTFSTrip(context: context)
+                    trip.id = record["trip_id"] ?? ""
+                    trip.routeId = record["route_id"] ?? ""
+                    trip.serviceId = record["service_id"] ?? ""
+                    trip.headsign = record["trip_headsign"]
+                    trip.shortName = record["trip_short_name"]
+                    trip.directionId = Int16(record["direction_id"] ?? "0") ?? 0
+                    trip.blockId = record["block_id"]
+                    trip.shapeId = record["shape_id"]
+                    trip.wheelchairAccessible = Int16(record["wheelchair_accessible"] ?? "0") ?? 0
+                    trip.bikesAllowed = Int16(record["bikes_allowed"] ?? "0") ?? 0
+                }
+
+                try context.save()
             }
-
-            try context.save()
         }
+
+        Logger.database.info("Completed importing trips")
     }
 
     // MARK: - Import Stop Times
@@ -315,107 +345,157 @@ public actor GTFSImporter {
             throw ImportError.missingRequiredFile("stop_times.txt")
         }
 
-        let context = await databaseManager.newBackgroundContext()
+        let records = parseCSV(csv)
+        let batchSize = 1_000 // Larger batch size for stop_times since it's the biggest table
 
-        try await context.perform {
-            let records = self.parseCSV(csv)
+        Logger.database.info("Importing \(records.count) stop_times in batches of \(batchSize)")
 
-            for record in records {
-                let stopTime = GTFSStopTime(context: context)
-                stopTime.tripId = record["trip_id"] ?? ""
-                stopTime.stopId = record["stop_id"] ?? ""
-                stopTime.arrivalTime = record["arrival_time"] ?? ""
-                stopTime.departureTime = record["departure_time"] ?? ""
-                stopTime.stopSequence = Int32(record["stop_sequence"] ?? "0") ?? 0
-                stopTime.stopHeadsign = record["stop_headsign"]
-                stopTime.pickupType = Int16(record["pickup_type"] ?? "0") ?? 0
-                stopTime.dropOffType = Int16(record["drop_off_type"] ?? "0") ?? 0
-                stopTime.shapeDistTraveled = Double(record["shape_dist_traveled"] ?? "0") ?? 0
-                stopTime.timepoint = Int16(record["timepoint"] ?? "1") ?? 1
+        for batchStart in stride(from: 0, to: records.count, by: batchSize) {
+            let batchEnd = min(batchStart + batchSize, records.count)
+            let batch = Array(records[batchStart..<batchEnd])
+
+            let context = await databaseManager.newBackgroundContext()
+
+            try await context.perform {
+                for record in batch {
+                    let stopTime = GTFSStopTime(context: context)
+                    stopTime.tripId = record["trip_id"] ?? ""
+                    stopTime.stopId = record["stop_id"] ?? ""
+                    stopTime.arrivalTime = record["arrival_time"] ?? ""
+                    stopTime.departureTime = record["departure_time"] ?? ""
+                    stopTime.stopSequence = Int32(record["stop_sequence"] ?? "0") ?? 0
+                    stopTime.stopHeadsign = record["stop_headsign"]
+                    stopTime.pickupType = Int16(record["pickup_type"] ?? "0") ?? 0
+                    stopTime.dropOffType = Int16(record["drop_off_type"] ?? "0") ?? 0
+                    stopTime.shapeDistTraveled = Double(record["shape_dist_traveled"] ?? "0") ?? 0
+                    stopTime.timepoint = Int16(record["timepoint"] ?? "1") ?? 1
+                }
+
+                try context.save()
             }
 
-            try context.save()
+            Logger.database
+                .info("Imported batch \(batchStart / batchSize + 1) of \((records.count + batchSize - 1) / batchSize)")
         }
-    }
 
+        Logger.database.info("Completed importing stop_times")
+    }
+}
+
+// MARK: - Calendar & Shapes Import
+
+extension GTFSImporter {
     // MARK: - Import Calendar
 
-    private func importCalendar(_ csv: String?) async throws {
+    func importCalendar(_ csv: String?) async throws {
         guard let csv else {
             // calendar.txt is optional if calendar_dates.txt is present
             return
         }
 
-        let context = await databaseManager.newBackgroundContext()
+        let records = parseCSV(csv)
+        let batchSize = 500
 
-        try await context.perform {
-            let records = self.parseCSV(csv)
+        Logger.database.info("Importing \(records.count) calendar entries in batches of \(batchSize)")
 
-            for record in records {
-                let calendar = GTFSCalendar(context: context)
-                calendar.serviceId = record["service_id"] ?? ""
-                calendar.monday = record["monday"] == "1"
-                calendar.tuesday = record["tuesday"] == "1"
-                calendar.wednesday = record["wednesday"] == "1"
-                calendar.thursday = record["thursday"] == "1"
-                calendar.friday = record["friday"] == "1"
-                calendar.saturday = record["saturday"] == "1"
-                calendar.sunday = record["sunday"] == "1"
-                calendar.startDate = record["start_date"] ?? ""
-                calendar.endDate = record["end_date"] ?? ""
+        for batchStart in stride(from: 0, to: records.count, by: batchSize) {
+            let batchEnd = min(batchStart + batchSize, records.count)
+            let batch = Array(records[batchStart..<batchEnd])
+
+            let context = await databaseManager.newBackgroundContext()
+
+            try await context.perform {
+                for record in batch {
+                    let calendar = GTFSCalendar(context: context)
+                    calendar.serviceId = record["service_id"] ?? ""
+                    calendar.monday = record["monday"] == "1"
+                    calendar.tuesday = record["tuesday"] == "1"
+                    calendar.wednesday = record["wednesday"] == "1"
+                    calendar.thursday = record["thursday"] == "1"
+                    calendar.friday = record["friday"] == "1"
+                    calendar.saturday = record["saturday"] == "1"
+                    calendar.sunday = record["sunday"] == "1"
+                    calendar.startDate = record["start_date"] ?? ""
+                    calendar.endDate = record["end_date"] ?? ""
+                }
+
+                try context.save()
             }
-
-            try context.save()
         }
+
+        Logger.database.info("Completed importing calendar")
     }
 
     // MARK: - Import Calendar Dates
 
-    private func importCalendarDates(_ csv: String?) async throws {
+    func importCalendarDates(_ csv: String?) async throws {
         guard let csv else {
             // calendar_dates.txt is optional
             return
         }
 
-        let context = await databaseManager.newBackgroundContext()
+        let records = parseCSV(csv)
+        let batchSize = 500
 
-        try await context.perform {
-            let records = self.parseCSV(csv)
+        Logger.database.info("Importing \(records.count) calendar_dates in batches of \(batchSize)")
 
-            for record in records {
-                let calendarDate = GTFSCalendarDate(context: context)
-                calendarDate.serviceId = record["service_id"] ?? ""
-                calendarDate.date = record["date"] ?? ""
-                calendarDate.exceptionType = Int16(record["exception_type"] ?? "1") ?? 1
+        for batchStart in stride(from: 0, to: records.count, by: batchSize) {
+            let batchEnd = min(batchStart + batchSize, records.count)
+            let batch = Array(records[batchStart..<batchEnd])
+
+            let context = await databaseManager.newBackgroundContext()
+
+            try await context.perform {
+                for record in batch {
+                    let calendarDate = GTFSCalendarDate(context: context)
+                    calendarDate.serviceId = record["service_id"] ?? ""
+                    calendarDate.date = record["date"] ?? ""
+                    calendarDate.exceptionType = Int16(record["exception_type"] ?? "1") ?? 1
+                }
+
+                try context.save()
             }
-
-            try context.save()
         }
+
+        Logger.database.info("Completed importing calendar_dates")
     }
 
     // MARK: - Import Shapes
 
-    private func importShapes(_ csv: String?) async throws {
+    func importShapes(_ csv: String?) async throws {
         guard let csv else {
             // shapes.txt is optional
             return
         }
 
-        let context = await databaseManager.newBackgroundContext()
+        let records = parseCSV(csv)
+        let batchSize = 1_000 // Shapes can have many points per shape
 
-        try await context.perform {
-            let records = self.parseCSV(csv)
+        Logger.database.info("Importing \(records.count) shape points in batches of \(batchSize)")
 
-            for record in records {
-                let shape = GTFSShape(context: context)
-                shape.shapeId = record["shape_id"] ?? ""
-                shape.latitude = Double(record["shape_pt_lat"] ?? "0") ?? 0
-                shape.longitude = Double(record["shape_pt_lon"] ?? "0") ?? 0
-                shape.sequence = Int32(record["shape_pt_sequence"] ?? "0") ?? 0
-                shape.distTraveled = Double(record["shape_dist_traveled"] ?? "0") ?? 0
+        for batchStart in stride(from: 0, to: records.count, by: batchSize) {
+            let batchEnd = min(batchStart + batchSize, records.count)
+            let batch = Array(records[batchStart..<batchEnd])
+
+            let context = await databaseManager.newBackgroundContext()
+
+            try await context.perform {
+                for record in batch {
+                    let shape = GTFSShape(context: context)
+                    shape.shapeId = record["shape_id"] ?? ""
+                    shape.latitude = Double(record["shape_pt_lat"] ?? "0") ?? 0
+                    shape.longitude = Double(record["shape_pt_lon"] ?? "0") ?? 0
+                    shape.sequence = Int32(record["shape_pt_sequence"] ?? "0") ?? 0
+                    shape.distTraveled = Double(record["shape_dist_traveled"] ?? "0") ?? 0
+                }
+
+                try context.save()
             }
 
-            try context.save()
+            Logger.database
+                .info("Imported batch \(batchStart / batchSize + 1) of \((records.count + batchSize - 1) / batchSize)")
         }
+
+        Logger.database.info("Completed importing shapes")
     }
 }

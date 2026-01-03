@@ -75,7 +75,7 @@ public actor RealtimeService {
             }
         }
     }
-    
+
     /// Fetches real-time arrivals at a stop with future arrival times
     ///
     /// Combines GTFS-RT trip updates with GTFS static data to match stopSequence
@@ -89,14 +89,14 @@ public actor RealtimeService {
     public func fetchRealtimeArrivals(stopId: String, limit: Int = 10) async throws -> [TripUpdate] {
         let allUpdates = try await fetchTripUpdates()
         let now = Date()
-        
+
         // GTFS-RT from AUVASA doesn't include stopId, only stopSequence
         // We need to match using trip data from GTFS static
         var futureArrivals: [(TripUpdate, Date)] = []
-        
+
         for update in allUpdates {
             guard let tripId = update.trip.tripId else { continue }
-            
+
             // Get stop times for this trip from GTFS static data
             let stopTimes: [StopTime]
             do {
@@ -105,29 +105,31 @@ public actor RealtimeService {
                 // If GTFS data not available, skip this trip
                 continue
             }
-            
+
             // Find stop time updates that match this stop
             for stopUpdate in update.stopTimeUpdates {
                 guard let sequence = stopUpdate.stopSequence else { continue }
-                
+
                 // Match stopSequence with stopId from static data
-                if let stopTime = stopTimes.first(where: { $0.stopSequence == sequence }),
-                   stopTime.stopId == stopId,
-                   let arrival = stopUpdate.arrival,
-                   let arrivalTime = arrival.time,
-                   arrivalTime > now {
+                if
+                    let stopTime = stopTimes.first(where: { $0.stopSequence == sequence }),
+                    stopTime.stopId == stopId,
+                    let arrival = stopUpdate.arrival,
+                    let arrivalTime = arrival.time,
+                    arrivalTime > now
+                {
                     futureArrivals.append((update, arrivalTime))
                     break
                 }
             }
         }
-        
+
         // Sort by arrival time and limit
         let sorted = futureArrivals
             .sorted { $0.1 < $1.1 }
             .prefix(limit)
-            .map { $0.0 }
-        
+            .map(\.0)
+
         return Array(sorted)
     }
 

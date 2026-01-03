@@ -24,6 +24,116 @@ extension AuvasaClient {
         return map
     }
 
+    /// Finds a matching trip update using multiple strategies
+    /// 1. First tries exact tripId match
+    /// 2. Then tries routeId + startTime match
+    /// 3. Falls back to routeId + stopSequence (if route+time fails, pick trip with our stop)
+    func findMatchingTripUpdate(
+        for trip: Trip,
+        firstDepartureTime: String,
+        stopSequence: Int,
+        in updates: [TripUpdate]
+    ) async -> TripUpdate? {
+        // Strategy 1: Exact trip ID match
+        if let exactMatch = updates.first(where: { $0.trip.tripId == trip.id }) {
+            return exactMatch
+        }
+
+        // Strategy 2: Match by route + start time (most reliable when available)
+        // GTFS-RT provides start_time which should match the first departure time of the trip
+        if
+            let routeTimeMatch = updates.first(where: { update in
+                guard
+                    let rtRouteId = update.trip.routeId,
+                    let rtStartTime = update.trip.startTime else
+                {
+                    return false
+                }
+                return rtRouteId == trip.routeId && rtStartTime == firstDepartureTime
+            })
+        {
+            return routeTimeMatch
+        }
+
+        // Strategy 3: Match by route + stopSequence (fallback when startTime doesn't match)
+        // Find trips with matching route that have our stopSequence
+        return updates.first { update in
+            guard let rtRouteId = update.trip.routeId else { return false }
+            guard rtRouteId == trip.routeId else { return false }
+
+            // Check if this trip update has our stopSequence
+            return update.stopTimeUpdates.contains { st in
+                guard let seq = st.stopSequence else { return false }
+                return seq == Int32(stopSequence)
+            }
+        }
+    }
+
+    /// Builds arrivals from stop times and trip updates using smart matching
+    /// Filters out trips whose service is not active on the current date
+    /// Uses multiple matching strategies: exact tripId, then route+startTime
+    func buildArrivals(
+        from stopTimes: [StopTime],
+        stopId: String,
+        realtimeUpdates: [TripUpdate]
+    ) async throws -> [Arrival] {
+        var arrivals: [Arrival] = []
+        let now = Date()
+
+        for stopTime in stopTimes {
+            guard
+                let trip = try await scheduleService.fetchTrip(id: stopTime.tripId),
+                let route = try await routeService.fetchRoute(id: trip.routeId),
+                let scheduledDate = convertStopTimeToDate(stopTime.departureTime, on: now) else
+            {
+                continue
+            }
+
+            // Filter out trips whose service is not active today
+            let isActive = try await scheduleService.isServiceActive(serviceId: trip.serviceId, on: now)
+            guard isActive else {
+                Logger.database.debug(
+                    "Skipping trip \(trip.id) with inactive service \(trip.serviceId)"
+                )
+                continue
+            }
+
+            // Get first departure time of this trip for matching with GTFS-RT start_time
+            let tripStopTimes = try await scheduleService.fetchStopTimes(tripId: trip.id)
+            guard let firstDepartureTime = tripStopTimes.first?.departureTime else {
+                continue
+            }
+
+            // Use smart matching to find corresponding real-time update
+            let matchingUpdate = await findMatchingTripUpdate(
+                for: trip,
+                firstDepartureTime: firstDepartureTime,
+                stopSequence: Int(stopTime.stopSequence),
+                in: realtimeUpdates
+            )
+
+            let (estimatedDate, delay) = extractRealtimeInfo(
+                for: stopId,
+                stopTime: stopTime,
+                tripUpdate: matchingUpdate,
+                scheduledDate: scheduledDate
+            )
+
+            arrivals.append(Arrival(
+                stopId: stopId,
+                route: route,
+                trip: trip,
+                scheduledTime: scheduledDate,
+                estimatedTime: estimatedDate,
+                delay: delay,
+                realtimeAvailable: estimatedDate != nil,
+                stopSequence: stopTime.stopSequence
+            ))
+        }
+
+        return arrivals
+    }
+
     /// Builds arrivals from stop times and trip updates
     /// Filters out trips whose service is not active on the current date
     func buildArrivals(
