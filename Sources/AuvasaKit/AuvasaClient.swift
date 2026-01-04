@@ -308,18 +308,19 @@ public actor AuvasaClient {
 
         var seenKeys = Set<String>()
         let uniqueArrivals = sortedArrivals.filter { arrival in
-            // Create unique key: routeId + headsign + scheduledTime (rounded to minute)
+            // Create unique key: routeId + headsign + bestTime (rounded to minute)
+            // Use bestTime instead of scheduledTime because that's what users see
             let headsign = arrival.trip.headsign ?? ""
-            let timeInterval = Int(arrival.scheduledTime.timeIntervalSince1970 / 60) * 60 // Round to minute
+            let timeInterval = Int(arrival.bestTime.timeIntervalSince1970 / 60) * 60 // Round to minute
             let uniqueKey = "\(arrival.route.id)_\(headsign)_\(timeInterval)"
 
             if seenKeys.contains(uniqueKey) {
-                Logger.database.info("  ❌ Filtering Route \(arrival.route.shortName) → \(headsign): duplicate service [TripID: \(arrival.trip.id)]")
+                Logger.database.info("  ❌ Filtering Route \(arrival.route.shortName) → \(headsign): duplicate [TripID: \(arrival.trip.id)]")
                 return false
             }
 
             seenKeys.insert(uniqueKey)
-            Logger.database.info("  ✅ Keeping Route \(arrival.route.shortName) → \(headsign) at \(arrival.scheduledTime) [TripID: \(arrival.trip.id)]")
+            Logger.database.info("  ✅ Keeping Route \(arrival.route.shortName) → \(headsign) at \(arrival.bestTime) [TripID: \(arrival.trip.id)]")
             return true
         }
         Logger.database.info("🔍 After deduplication: \(uniqueArrivals.count) unique arrivals")
