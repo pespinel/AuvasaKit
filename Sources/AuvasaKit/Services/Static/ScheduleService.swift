@@ -185,34 +185,57 @@ public actor ScheduleService {
     }
 
     /// Checks if a service is active on a specific date
+    ///
+    /// AUVASA uses calendar_dates.txt exclusively (calendar.txt is empty).
+    /// Services are defined by exception_type=1 (added) entries on specific dates.
+    /// If a service has calendar_dates entries but today is not listed, the service is NOT active.
+    ///
     /// - Parameters:
     ///   - serviceId: Service identifier
     ///   - date: Date to check
     /// - Returns: True if service is active on the date
     public func isServiceActive(serviceId: String, on date: Date) async throws -> Bool {
-        // Check calendar
-        if let calendar = try await fetchCalendar(serviceId: serviceId) {
-            if !calendar.runsOn(date: date) {
-                return false
-            }
-        }
-
-        // Check calendar dates for exceptions
-        let calendarDates = try await fetchCalendarDates(serviceId: serviceId)
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyyMMdd"
         let dateString = dateFormatter.string(from: date)
 
+        // Check calendar.txt first (base schedule)
+        if let calendar = try await fetchCalendar(serviceId: serviceId) {
+            // Calendar exists: check if date is in range and day of week is active
+            let isBaseActive = calendar.runsOn(date: date)
+
+            // Then check calendar_dates for exceptions
+            let calendarDates = try await fetchCalendarDates(serviceId: serviceId)
+            for calendarDate in calendarDates where calendarDate.date == dateString {
+                switch calendarDate.exceptionType {
+                case .added:
+                    return true // Exception adds service on this day
+                case .removed:
+                    return false // Exception removes service on this day
+                }
+            }
+
+            return isBaseActive
+        }
+
+        // No calendar.txt entry: service is ONLY active on dates listed in calendar_dates.txt
+        // This is how AUVASA works - all services are defined by calendar_dates exceptions
+        let calendarDates = try await fetchCalendarDates(serviceId: serviceId)
+
+        // If there are no calendar_dates entries, service is never active
+        guard !calendarDates.isEmpty else {
+            return false
+        }
+
+        // Check if today is listed as an "added" exception
         for calendarDate in calendarDates where calendarDate.date == dateString {
-            switch calendarDate.exceptionType {
-            case .added:
+            if calendarDate.exceptionType == .added {
                 return true
-            case .removed:
-                return false
             }
         }
 
-        return true
+        // Today is not in the list of active dates
+        return false
     }
 
     // MARK: - Shapes

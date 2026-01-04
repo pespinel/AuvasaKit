@@ -308,16 +308,20 @@ public actor AuvasaClient {
 
         var seenKeys = Set<String>()
         let uniqueArrivals = sortedArrivals.filter { arrival in
-            // Create unique key: routeId + headsign + bestTime (rounded to minute)
-            // Use bestTime instead of scheduledTime because that's what users see
+            // Create unique key: routeId + headsign + directionId + bestTime (EXACT, no rounding)
+            // - Use bestTime instead of scheduledTime because that's what users see
+            // - Don't round time - different estimated times mean different buses
+            // - Include directionId to keep buses going in opposite directions
+            // - Only filter if EXACT same time (to the second) - true duplicates from bad data
             let headsign = arrival.trip.headsign ?? ""
-            let timeInterval = Int(arrival.bestTime.timeIntervalSince1970 / 60) * 60 // Round to minute
-            let uniqueKey = "\(arrival.route.id)_\(headsign)_\(timeInterval)"
+            let direction = arrival.trip.directionId ?? 0
+            let timeInterval = Int(arrival.bestTime.timeIntervalSince1970) // No rounding - exact time
+            let uniqueKey = "\(arrival.route.id)_\(headsign)_\(direction)_\(timeInterval)"
 
             if seenKeys.contains(uniqueKey) {
                 Logger.database
                     .info(
-                        "  ❌ Filtering Route \(arrival.route.shortName) → \(headsign): duplicate [TripID: \(arrival.trip.id)]"
+                        "  ❌ Filtering Route \(arrival.route.shortName) → \(headsign) (dir:\(direction)): duplicate [TripID: \(arrival.trip.id)]"
                     )
                 return false
             }
@@ -325,7 +329,7 @@ public actor AuvasaClient {
             seenKeys.insert(uniqueKey)
             Logger.database
                 .info(
-                    "  ✅ Keeping Route \(arrival.route.shortName) → \(headsign) at \(arrival.bestTime) [TripID: \(arrival.trip.id)]"
+                    "  ✅ Keeping Route \(arrival.route.shortName) → \(headsign) (dir:\(direction)) at \(arrival.bestTime) [TripID: \(arrival.trip.id)]"
                 )
             return true
         }
