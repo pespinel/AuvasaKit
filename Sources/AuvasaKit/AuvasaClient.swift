@@ -316,7 +316,8 @@ public actor AuvasaClient {
             let roundedTime = Int(timeInterval / 60) * 60 // Round to minute
             let uniqueKey = "\(arrival.route.id)_\(roundedTime)"
 
-            Logger.database.info("  🔑 Key: \(uniqueKey) [RouteID: \(arrival.route.id), Route: \(arrival.route.shortName)]")
+            Logger.database
+                .info("  🔑 Key: \(uniqueKey) [RouteID: \(arrival.route.id), Route: \(arrival.route.shortName)]")
 
             let isDuplicate = seenRouteTimestamps.contains(uniqueKey)
             if isDuplicate {
