@@ -302,26 +302,24 @@ public actor AuvasaClient {
         // Sort by time first to ensure consistent deduplication
         let sortedArrivals = arrivals.sorted { $0.bestTime < $1.bestTime }
 
-        // Deduplicate by route + scheduled time
-        // Multiple trips of the same route arriving at the same time are shown as one arrival
+        // Deduplicate by route + headsign + time
+        // Different tripIds with same route, destination, and arrival time represent the same service
         Logger.database.info("🔍 Before deduplication: \(sortedArrivals.count) arrivals")
 
-        var seenRouteTimestamps = Set<String>()
+        var seenKeys = Set<String>()
         let uniqueArrivals = sortedArrivals.filter { arrival in
-            // Create unique key: routeId + scheduled time (rounded to minute)
-            let timeInterval = arrival.scheduledTime.timeIntervalSince1970
-            let roundedTime = Int(timeInterval / 60) * 60 // Round to minute
-            let uniqueKey = "\(arrival.route.id)_\(roundedTime)"
+            // Create unique key: routeId + headsign + scheduledTime (rounded to minute)
+            let headsign = arrival.trip.headsign ?? ""
+            let timeInterval = Int(arrival.scheduledTime.timeIntervalSince1970 / 60) * 60 // Round to minute
+            let uniqueKey = "\(arrival.route.id)_\(headsign)_\(timeInterval)"
 
-            let isDuplicate = seenRouteTimestamps.contains(uniqueKey)
-            if isDuplicate {
-                Logger.database
-                    .info(
-                        "🔍 Filtering duplicate: Route \(arrival.route.shortName) at \(arrival.scheduledTime) [TripID: \(arrival.trip.id)]"
-                    )
+            if seenKeys.contains(uniqueKey) {
+                Logger.database.info("  ❌ Filtering Route \(arrival.route.shortName) → \(headsign): duplicate service [TripID: \(arrival.trip.id)]")
                 return false
             }
-            seenRouteTimestamps.insert(uniqueKey)
+
+            seenKeys.insert(uniqueKey)
+            Logger.database.info("  ✅ Keeping Route \(arrival.route.shortName) → \(headsign) at \(arrival.scheduledTime) [TripID: \(arrival.trip.id)]")
             return true
         }
         Logger.database.info("🔍 After deduplication: \(uniqueArrivals.count) unique arrivals")
