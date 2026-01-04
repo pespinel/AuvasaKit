@@ -92,35 +92,6 @@ public struct Arrival: Sendable, Equatable, Codable {
         }
     }
 
-    /// Status text in Google Maps style (Spanish)
-    ///
-    /// Returns status text matching Google Maps format:
-    /// - "Programado" - Scheduled (no real-time data)
-    /// - "En hora" - On time (delay = 0)
-    /// - "Con X minuto(s) de adelanto" - X minutes early
-    /// - "Con X minuto(s) de retraso" - X minutes late
-    public var statusText: String {
-        guard let delay else {
-            return "Programado"
-        }
-
-        if delay == 0 {
-            return "En hora"
-        } else if delay < 0 {
-            let minutes = abs(delay) / 60
-            if minutes == 0 {
-                return "En hora"
-            }
-            return "Con \(minutes) minuto\(minutes == 1 ? "" : "s") de adelanto"
-        } else {
-            let minutes = delay / 60
-            if minutes == 0 {
-                return "En hora"
-            }
-            return "Con \(minutes) minuto\(minutes == 1 ? "" : "s") de retraso"
-        }
-    }
-
     /// Indicates if the arrival is significantly delayed (> 5 minutes)
     public var isDelayed: Bool {
         guard let delay else { return false }
