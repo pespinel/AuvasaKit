@@ -315,12 +315,18 @@ public actor AuvasaClient {
             let uniqueKey = "\(arrival.route.id)_\(headsign)_\(timeInterval)"
 
             if seenKeys.contains(uniqueKey) {
-                Logger.database.info("  ❌ Filtering Route \(arrival.route.shortName) → \(headsign): duplicate [TripID: \(arrival.trip.id)]")
+                Logger.database
+                    .info(
+                        "  ❌ Filtering Route \(arrival.route.shortName) → \(headsign): duplicate [TripID: \(arrival.trip.id)]"
+                    )
                 return false
             }
 
             seenKeys.insert(uniqueKey)
-            Logger.database.info("  ✅ Keeping Route \(arrival.route.shortName) → \(headsign) at \(arrival.bestTime) [TripID: \(arrival.trip.id)]")
+            Logger.database
+                .info(
+                    "  ✅ Keeping Route \(arrival.route.shortName) → \(headsign) at \(arrival.bestTime) [TripID: \(arrival.trip.id)]"
+                )
             return true
         }
         Logger.database.info("🔍 After deduplication: \(uniqueArrivals.count) unique arrivals")
