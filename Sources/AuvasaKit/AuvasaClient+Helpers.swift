@@ -210,13 +210,12 @@ extension AuvasaClient {
         }
 
         // Use explicit delay if provided, otherwise calculate from time difference
-        let delay: Int?
-        if let explicitDelay = event.delay {
-            delay = explicitDelay
+        let delay: Int? = if let explicitDelay = event.delay {
+            explicitDelay
         } else if let estimated = estimatedDate {
-            delay = Int(estimated.timeIntervalSince(scheduledDate))
+            Int(estimated.timeIntervalSince(scheduledDate))
         } else {
-            delay = nil
+            nil
         }
 
         return (estimatedDate, delay)
@@ -291,13 +290,12 @@ extension AuvasaClient {
         }
 
         // Use explicit delay if provided, otherwise calculate from time difference
-        let delay: Int?
-        if let explicitDelay = event.delay {
-            delay = explicitDelay
+        let delay: Int? = if let explicitDelay = event.delay {
+            explicitDelay
         } else if let estimated = estimatedDate {
-            delay = Int(estimated.timeIntervalSince(scheduledDate))
+            Int(estimated.timeIntervalSince(scheduledDate))
         } else {
-            delay = nil
+            nil
         }
 
         return (estimatedDate, delay)
