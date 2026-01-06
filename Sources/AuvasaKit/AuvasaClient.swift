@@ -572,6 +572,37 @@ public actor AuvasaClient {
         try await routeService.fetchRoutes(type: type)
     }
 
+    /// Fetches all routes that serve a specific stop
+    ///
+    /// - Parameter stopId: Stop identifier
+    /// - Returns: Array of routes that have trips passing through this stop
+    /// - Throws: Database errors if query fails
+    ///
+    /// Example:
+    /// ```swift
+    /// let routes = try await client.fetchRoutes(servingStop: "123")
+    /// print("Routes at this stop: \(routes.map(\.shortName))")
+    /// ```
+    public func fetchRoutes(servingStop stopId: String) async throws -> [Route] {
+        try await routeService.fetchRoutes(servingStop: stopId)
+    }
+
+    /// Fetches route IDs that serve a specific stop
+    ///
+    /// This is more efficient than `fetchRoutes(servingStop:)` when you only need the IDs.
+    ///
+    /// - Parameter stopId: Stop identifier
+    /// - Returns: Array of route IDs sorted alphabetically
+    /// - Throws: Database errors if query fails
+    ///
+    /// Example:
+    /// ```swift
+    /// let routeIds = try await client.fetchRouteIds(servingStop: "123")
+    /// ```
+    public func fetchRouteIds(servingStop stopId: String) async throws -> [String] {
+        try await routeService.fetchRouteIds(servingStop: stopId)
+    }
+
     // MARK: - Schedules
 
     /// Gets the schedule for a stop on a specific date

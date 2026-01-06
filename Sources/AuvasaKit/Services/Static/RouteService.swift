@@ -131,6 +131,89 @@ public actor RouteService {
         }
     }
 
+    /// Fetches all routes that serve a specific stop
+    /// - Parameter stopId: Stop identifier
+    /// - Returns: Array of routes that have trips passing through this stop
+    public func fetchRoutes(servingStop stopId: String) async throws -> [Route] {
+        let context = await databaseManager.newBackgroundContext()
+
+        return try await context.perform {
+            // Step 1: Get all trip IDs that stop at this stop
+            let stopTimeRequest = NSFetchRequest<NSDictionary>(entityName: "GTFSStopTime")
+            stopTimeRequest.predicate = NSPredicate(format: "stopId == %@", stopId)
+            stopTimeRequest.propertiesToFetch = ["tripId"]
+            stopTimeRequest.resultType = .dictionaryResultType
+            stopTimeRequest.returnsDistinctResults = true
+
+            let stopTimeResults = try context.fetch(stopTimeRequest)
+            let tripIds = stopTimeResults.compactMap { $0["tripId"] as? String }
+
+            guard !tripIds.isEmpty else {
+                return []
+            }
+
+            // Step 2: Get route IDs from those trips
+            let tripRequest = NSFetchRequest<NSDictionary>(entityName: "GTFSTrip")
+            tripRequest.predicate = NSPredicate(format: "id IN %@", tripIds)
+            tripRequest.propertiesToFetch = ["routeId"]
+            tripRequest.resultType = .dictionaryResultType
+            tripRequest.returnsDistinctResults = true
+
+            let tripResults = try context.fetch(tripRequest)
+            let routeIds = Set(tripResults.compactMap { $0["routeId"] as? String })
+
+            guard !routeIds.isEmpty else {
+                return []
+            }
+
+            // Step 3: Get the actual routes
+            let routeRequest = NSFetchRequest<GTFSRoute>(entityName: "GTFSRoute")
+            routeRequest.predicate = NSPredicate(format: "id IN %@", Array(routeIds))
+            routeRequest.sortDescriptors = [
+                NSSortDescriptor(key: "sortOrder", ascending: true),
+                NSSortDescriptor(key: "shortName", ascending: true)
+            ]
+
+            let routes = try context.fetch(routeRequest)
+            return routes.map { self.convertToRoute($0) }
+        }
+    }
+
+    /// Fetches route IDs that serve a specific stop (lighter than fetching full Route objects)
+    /// - Parameter stopId: Stop identifier
+    /// - Returns: Array of route IDs
+    public func fetchRouteIds(servingStop stopId: String) async throws -> [String] {
+        let context = await databaseManager.newBackgroundContext()
+
+        return try await context.perform {
+            // Get all trip IDs that stop at this stop
+            let stopTimeRequest = NSFetchRequest<NSDictionary>(entityName: "GTFSStopTime")
+            stopTimeRequest.predicate = NSPredicate(format: "stopId == %@", stopId)
+            stopTimeRequest.propertiesToFetch = ["tripId"]
+            stopTimeRequest.resultType = .dictionaryResultType
+            stopTimeRequest.returnsDistinctResults = true
+
+            let stopTimeResults = try context.fetch(stopTimeRequest)
+            let tripIds = stopTimeResults.compactMap { $0["tripId"] as? String }
+
+            guard !tripIds.isEmpty else {
+                return []
+            }
+
+            // Get route IDs from those trips
+            let tripRequest = NSFetchRequest<NSDictionary>(entityName: "GTFSTrip")
+            tripRequest.predicate = NSPredicate(format: "id IN %@", tripIds)
+            tripRequest.propertiesToFetch = ["routeId"]
+            tripRequest.resultType = .dictionaryResultType
+            tripRequest.returnsDistinctResults = true
+
+            let tripResults = try context.fetch(tripRequest)
+            let routeIds = Set(tripResults.compactMap { $0["routeId"] as? String })
+
+            return Array(routeIds).sorted()
+        }
+    }
+
     // MARK: - Conversion
 
     nonisolated private func convertToRoute(_ gtfsRoute: GTFSRoute) -> Route {
