@@ -186,6 +186,7 @@ extension AuvasaClient {
     }
 
     /// Extracts real-time information from trip update
+    /// If the feed provides `time` but not `delay`, calculates delay from the difference
     func extractRealtimeInfo(
         for stopId: String,
         stopTime: StopTime,
@@ -208,7 +209,17 @@ extension AuvasaClient {
             scheduledDate.addingTimeInterval(TimeInterval($0))
         }
 
-        return (estimatedDate, event.delay)
+        // Use explicit delay if provided, otherwise calculate from time difference
+        let delay: Int?
+        if let explicitDelay = event.delay {
+            delay = explicitDelay
+        } else if let estimated = estimatedDate {
+            delay = Int(estimated.timeIntervalSince(scheduledDate))
+        } else {
+            delay = nil
+        }
+
+        return (estimatedDate, delay)
     }
 
     /// Fetches real-time data for a specific trip
@@ -257,6 +268,7 @@ extension AuvasaClient {
     }
 
     /// Extracts real-time info for trip details
+    /// If the feed provides `time` but not `delay`, calculates delay from the difference
     func extractRealtimeInfoForTrip(
         stopTime: StopTime,
         tripUpdate: TripUpdate?,
@@ -278,7 +290,17 @@ extension AuvasaClient {
             scheduledDate.addingTimeInterval(TimeInterval($0))
         }
 
-        return (estimatedDate, event.delay)
+        // Use explicit delay if provided, otherwise calculate from time difference
+        let delay: Int?
+        if let explicitDelay = event.delay {
+            delay = explicitDelay
+        } else if let estimated = estimatedDate {
+            delay = Int(estimated.timeIntervalSince(scheduledDate))
+        } else {
+            delay = nil
+        }
+
+        return (estimatedDate, delay)
     }
 
     /// Calculates trip progress
