@@ -1,5 +1,43 @@
 import Foundation
 
+/// Configuration for API endpoints
+public struct APIEndpointConfiguration {
+    public let vehiclePositionsURL: URL
+    public let tripUpdatesURL: URL
+    public let alertsURL: URL
+    public let staticDataURL: URL
+
+    /// Default configuration using AUVASA direct endpoints
+    public static let `default`: APIEndpointConfiguration = {
+        guard
+            let vehiclePositionsURL = URL(string: "http://212.170.201.204:50080/GTFSRTapi/api/vehicleposition"),
+            let tripUpdatesURL = URL(string: "http://212.170.201.204:50080/GTFSRTapi/api/tripupdate"),
+            let alertsURL = URL(string: "http://212.170.201.204:50080/GTFSRTapi/api/alert"),
+            let staticDataURL = URL(string: "http://212.170.201.204:50080/GTFSRTapi/api/GTFSFile") else
+        {
+            fatalError("Invalid default AUVASA endpoint URLs")
+        }
+        return APIEndpointConfiguration(
+            vehiclePositionsURL: vehiclePositionsURL,
+            tripUpdatesURL: tripUpdatesURL,
+            alertsURL: alertsURL,
+            staticDataURL: staticDataURL
+        )
+    }()
+
+    public init(
+        vehiclePositionsURL: URL,
+        tripUpdatesURL: URL,
+        alertsURL: URL,
+        staticDataURL: URL
+    ) {
+        self.vehiclePositionsURL = vehiclePositionsURL
+        self.tripUpdatesURL = tripUpdatesURL
+        self.alertsURL = alertsURL
+        self.staticDataURL = staticDataURL
+    }
+}
+
 /// GTFS Real-Time API endpoints
 public enum APIEndpoint {
     /// Vehicle positions endpoint
@@ -14,47 +52,19 @@ public enum APIEndpoint {
     /// Static GTFS data ZIP file
     case staticData
 
-    /// The full URL for the endpoint
-    public var url: URL {
+    /// Returns the URL for the endpoint using the provided configuration
+    /// - Parameter configuration: The endpoint configuration to use
+    /// - Returns: The full URL for the endpoint
+    public func url(with configuration: APIEndpointConfiguration) -> URL {
         switch self {
         case .vehiclePositions:
-            Self.vehiclePositionsURL
+            configuration.vehiclePositionsURL
         case .tripUpdates:
-            Self.tripUpdatesURL
+            configuration.tripUpdatesURL
         case .alerts:
-            Self.alertsURL
+            configuration.alertsURL
         case .staticData:
-            Self.staticDataURL
+            configuration.staticDataURL
         }
     }
-
-    // MARK: - Private URL Constants
-
-    private static let vehiclePositionsURL: URL = {
-        guard let url = URL(string: "http://212.170.201.204:50080/GTFSRTapi/api/vehicleposition") else {
-            fatalError("Invalid vehicle positions URL")
-        }
-        return url
-    }()
-
-    private static let tripUpdatesURL: URL = {
-        guard let url = URL(string: "http://212.170.201.204:50080/GTFSRTapi/api/tripupdate") else {
-            fatalError("Invalid trip updates URL")
-        }
-        return url
-    }()
-
-    private static let alertsURL: URL = {
-        guard let url = URL(string: "http://212.170.201.204:50080/GTFSRTapi/api/alert") else {
-            fatalError("Invalid alerts URL")
-        }
-        return url
-    }()
-
-    private static let staticDataURL: URL = {
-        guard let url = URL(string: "http://212.170.201.204:50080/GTFSRTapi/api/GTFSFile") else {
-            fatalError("Invalid static data URL")
-        }
-        return url
-    }()
 }

@@ -4,16 +4,20 @@ import Foundation
 public actor APIClient {
     private let session: URLSession
     private let timeout: TimeInterval
+    private let endpointConfiguration: APIEndpointConfiguration
 
     /// Creates a new API client
     /// - Parameters:
     ///   - configuration: URL session configuration
     ///   - timeout: Request timeout in seconds (default: 30)
+    ///   - endpointConfiguration: API endpoint configuration (default: .default)
     public init(
         configuration: URLSessionConfiguration = .default,
-        timeout: TimeInterval = 30
+        timeout: TimeInterval = 30,
+        endpointConfiguration: APIEndpointConfiguration = .default
     ) {
         self.timeout = timeout
+        self.endpointConfiguration = endpointConfiguration
 
         var config = configuration
         config.timeoutIntervalForRequest = timeout
@@ -28,7 +32,7 @@ public actor APIClient {
     /// - Returns: Raw data from the response
     /// - Throws: NetworkError if the request fails
     public func fetch(from endpoint: APIEndpoint) async throws -> Data {
-        let url = endpoint.url
+        let url = endpoint.url(with: endpointConfiguration)
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"

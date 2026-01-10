@@ -10,8 +10,13 @@ public actor RealtimeService {
     /// - Parameters:
     ///   - apiClient: The API client to use for network requests
     ///   - scheduleService: Schedule service for accessing GTFS static data
-    public init(apiClient: APIClient = APIClient(), scheduleService: ScheduleService) {
-        self.apiClient = apiClient
+    ///   - endpointConfiguration: API endpoint configuration (default: .default)
+    public init(
+        apiClient: APIClient? = nil,
+        scheduleService: ScheduleService,
+        endpointConfiguration: APIEndpointConfiguration = .default
+    ) {
+        self.apiClient = apiClient ?? APIClient(endpointConfiguration: endpointConfiguration)
         self.parser = ProtobufParser()
         self.scheduleService = scheduleService
     }

@@ -62,20 +62,25 @@ public actor AuvasaClient {
         public let databaseManager: DatabaseManager
         /// Polling interval for subscriptions in seconds
         public let pollingInterval: TimeInterval
+        /// API endpoint configuration
+        public let endpointConfiguration: APIEndpointConfiguration
 
         /// Creates a new configuration
         /// - Parameters:
         ///   - timeout: Request timeout in seconds (default: 30)
         ///   - databaseManager: Database manager (default: .shared)
         ///   - pollingInterval: Polling interval for subscriptions (default: 30)
+        ///   - endpointConfiguration: API endpoint configuration (default: .default)
         public init(
             timeout: TimeInterval = 30,
             databaseManager: DatabaseManager = .shared,
-            pollingInterval: TimeInterval = 30
+            pollingInterval: TimeInterval = 30,
+            endpointConfiguration: APIEndpointConfiguration = .default
         ) {
             self.timeout = timeout
             self.databaseManager = databaseManager
             self.pollingInterval = pollingInterval
+            self.endpointConfiguration = endpointConfiguration
         }
 
         /// Default configuration
@@ -85,12 +90,19 @@ public actor AuvasaClient {
     /// Creates a new AUVASA client
     /// - Parameter configuration: Client configuration
     public init(configuration: Configuration = .default) {
-        let apiClient = APIClient(timeout: configuration.timeout)
+        let apiClient = APIClient(
+            timeout: configuration.timeout,
+            endpointConfiguration: configuration.endpointConfiguration
+        )
         self.databaseManager = configuration.databaseManager
         self.stopService = StopService(databaseManager: databaseManager)
         self.routeService = RouteService(databaseManager: databaseManager)
         self.scheduleService = ScheduleService(databaseManager: databaseManager)
-        self.realtimeService = RealtimeService(apiClient: apiClient, scheduleService: scheduleService)
+        self.realtimeService = RealtimeService(
+            apiClient: apiClient,
+            scheduleService: scheduleService,
+            endpointConfiguration: configuration.endpointConfiguration
+        )
         self.gtfsImporter = GTFSImporter(databaseManager: databaseManager)
         self.subscriptionManager = SubscriptionManager(
             realtimeService: realtimeService,
@@ -319,18 +331,22 @@ public actor AuvasaClient {
             let uniqueKey = "\(arrival.route.id)_\(headsign)_\(direction)_\(timeInterval)"
 
             if seenKeys.contains(uniqueKey) {
-                Logger.database
-                    .info(
-                        "  ❌ Filtering Route \(arrival.route.shortName) → \(headsign) (dir:\(direction)): duplicate [TripID: \(arrival.trip.id)]"
-                    )
+                Logger.database.info(
+                    """
+                      ❌ Filtering Route \(arrival.route.shortName) → \(headsign) (dir:\(direction)): \
+                    duplicate [TripID: \(arrival.trip.id)]
+                    """
+                )
                 return false
             }
 
             seenKeys.insert(uniqueKey)
-            Logger.database
-                .info(
-                    "  ✅ Keeping Route \(arrival.route.shortName) → \(headsign) (dir:\(direction)) at \(arrival.bestTime) [TripID: \(arrival.trip.id)]"
-                )
+            Logger.database.info(
+                """
+                  ✅ Keeping Route \(arrival.route.shortName) → \(headsign) (dir:\(direction)) \
+                at \(arrival.bestTime) [TripID: \(arrival.trip.id)]
+                """
+            )
             return true
         }
         Logger.database.info("🔍 After deduplication: \(uniqueArrivals.count) unique arrivals")
