@@ -16,7 +16,7 @@ Add AuvasaKit to your iOS or macOS project.
 2. Go to **File** → **Add Package Dependencies...**
 3. Enter the repository URL:
    ```
-   https://github.com/yourusername/AuvasaKit.git
+   https://github.com/pespinel/AuvasaKit.git
    ```
 4. Select version: **1.0.0** or **Up to Next Major Version**
 5. Click **Add Package**
@@ -37,7 +37,7 @@ let package = Package(
         .macOS(.v12)
     ],
     dependencies: [
-        .package(url: "https://github.com/yourusername/AuvasaKit.git", from: "1.0.0")
+        .package(url: "https://github.com/pespinel/AuvasaKit.git", from: "1.0.0")
     ],
     targets: [
         .target(

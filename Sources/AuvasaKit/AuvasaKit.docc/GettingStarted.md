@@ -10,7 +10,7 @@ Add AuvasaKit to your project using Swift Package Manager:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/yourusername/AuvasaKit.git", from: "1.0.0")
+    .package(url: "https://github.com/pespinel/AuvasaKit.git", from: "1.0.0")
 ]
 ```
 

@@ -35,7 +35,7 @@
 /// - Swift 5.9+
 public enum AuvasaKit {
     /// The current version of AuvasaKit
-    public static let version = "0.1"
+    public static let version = "1.1.0"
 
     /// Creates a new AUVASA client with default configuration
     ///

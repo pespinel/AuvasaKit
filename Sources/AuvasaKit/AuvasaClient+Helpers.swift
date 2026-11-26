@@ -58,8 +58,7 @@ extension AuvasaClient {
         // Strategy 3: Match by route + stopSequence (fallback when startTime doesn't match)
         // Find trips with matching route that have our stopSequence
         return updates.first { update in
-            guard let rtRouteId = update.trip.routeId else { return false }
-            guard rtRouteId == trip.routeId else { return false }
+            guard let rtRouteId = update.trip.routeId, rtRouteId == trip.routeId else { return false }
 
             // Check if this trip update has our stopSequence
             return update.stopTimeUpdates.contains { st in

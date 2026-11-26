@@ -1,5 +1,4 @@
 import XCTest
-
 @testable import AuvasaKit
 
 /// Basic smoke tests for AuvasaKit

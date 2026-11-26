@@ -69,16 +69,14 @@ public actor CacheManager {
         }
 
         // 2. Check disk cache
-        if let diskCache {
-            if let cached: CachedValue<T> = await diskCache.get(key) {
-                if !cached.isExpired(policy: policy) {
-                    logger.debug("Cache hit (disk): \(key)")
-                    // Promote to memory cache
-                    await memoryCache.set(key, value: cached.value)
-                    return cached.value
-                }
-                logger.debug("Cache expired (disk): \(key)")
+        if let diskCache, let cached: CachedValue<T> = await diskCache.get(key) {
+            if !cached.isExpired(policy: policy) {
+                logger.debug("Cache hit (disk): \(key)")
+                // Promote to memory cache
+                await memoryCache.set(key, value: cached.value)
+                return cached.value
             }
+            logger.debug("Cache expired (disk): \(key)")
         }
 
         logger.debug("Cache miss: \(key)")
