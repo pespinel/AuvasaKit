@@ -103,7 +103,10 @@ public actor AuvasaClient {
             scheduleService: scheduleService,
             endpointConfiguration: configuration.endpointConfiguration
         )
-        self.gtfsImporter = GTFSImporter(databaseManager: databaseManager)
+        self.gtfsImporter = GTFSImporter(
+            databaseManager: databaseManager,
+            gtfsURL: configuration.endpointConfiguration.staticDataURL
+        )
         self.subscriptionManager = SubscriptionManager(
             realtimeService: realtimeService,
             pollingInterval: configuration.pollingInterval

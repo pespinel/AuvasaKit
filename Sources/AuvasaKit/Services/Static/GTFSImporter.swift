@@ -34,12 +34,7 @@ public actor GTFSImporter {
     private let databaseManager: DatabaseManager
     private let gtfsURL: URL
 
-    public static let defaultGTFSURL: URL = {
-        guard let url = URL(string: "http://212.170.201.204:50080/GTFSRTapi/api/GTFSFile") else {
-            fatalError("Invalid GTFS URL")
-        }
-        return url
-    }()
+    public static let defaultGTFSURL = APIEndpointConfiguration.default.staticDataURL
 
     /// Creates a new GTFS importer
     /// - Parameters:
