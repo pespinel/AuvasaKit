@@ -7,12 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0]
+
 ### Added
 
 - `getStopTimes(tripId:)` - Public API to get all stop times for a trip in sequence order
+- `APIEndpointConfiguration` - API endpoints are configurable via `AuvasaClient.Configuration`
 
 ### Fixed
 
+- Static GTFS import now uses the configured `staticDataURL` instead of always using the default URL
+- DocC installation guides pointed to a placeholder repository URL
+- `AuvasaKit.version` reported `0.1`
 - GTFS static data download URL updated to use direct API endpoint (`http://212.170.201.204:50080/GTFSRTapi/api/GTFSFile`) instead of WordPress file download page
 - `getNextArrivals()` now filters trips by active service calendar, preventing duplicate arrivals from inactive holiday/special schedules (NAV, NCH variants)
 
