@@ -1,6 +1,5 @@
 import Foundation
 import XCTest
-
 @testable import AuvasaKit
 
 final class ArrivalTests: XCTestCase {

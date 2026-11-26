@@ -89,13 +89,27 @@ public struct Calendar: Identifiable, Sendable, Equatable, Codable {
     /// Gets all days of the week this service runs
     public var activeDays: [String] {
         var days: [String] = []
-        if monday { days.append("Monday") }
-        if tuesday { days.append("Tuesday") }
-        if wednesday { days.append("Wednesday") }
-        if thursday { days.append("Thursday") }
-        if friday { days.append("Friday") }
-        if saturday { days.append("Saturday") }
-        if sunday { days.append("Sunday") }
+        if monday {
+            days.append("Monday")
+        }
+        if tuesday {
+            days.append("Tuesday")
+        }
+        if wednesday {
+            days.append("Wednesday")
+        }
+        if thursday {
+            days.append("Thursday")
+        }
+        if friday {
+            days.append("Friday")
+        }
+        if saturday {
+            days.append("Saturday")
+        }
+        if sunday {
+            days.append("Sunday")
+        }
         return days
     }
 }

@@ -56,11 +56,9 @@ actor MemoryCache {
         var oldestDate = Date()
 
         for (key, value) in storage {
-            if let cached = value as? (any CachedValueProtocol) {
-                if cached.timestamp < oldestDate {
-                    oldestDate = cached.timestamp
-                    oldestKey = key
-                }
+            if let cached = value as? (any CachedValueProtocol), cached.timestamp < oldestDate {
+                oldestDate = cached.timestamp
+                oldestKey = key
             }
         }
 

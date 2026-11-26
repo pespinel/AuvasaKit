@@ -2,7 +2,6 @@ import CoreData
 import Foundation
 import XCTest
 import ZIPFoundation
-
 @testable import AuvasaKit
 
 final class GTFSImporterTests: XCTestCase {
